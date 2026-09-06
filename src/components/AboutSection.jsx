@@ -27,7 +27,7 @@ export default function AboutSection() {
   ];
 
   return (
-    <section id="sobre" className="py-24 relative overflow-hidden w-full">
+    <section id="sobre" className="py-24 relative overflow-hidden w-full bg-stone-50/50 dark:bg-transparent transition-colors duration-300">
       {/* Background Lighting */}
       <div className="absolute -bottom-20 -left-20 w-96 h-96 bg-gold-glow pointer-events-none -z-10" />
 
@@ -38,18 +38,18 @@ export default function AboutSection() {
           
           {/* Left Column: Official Logo Card enlarged and stretched to exact same height */}
           <div className="lg:col-span-5 flex flex-col">
-            <div className="relative rounded-3xl overflow-hidden glass-card border border-gold-500/40 p-6 sm:p-8 md:p-10 shadow-2xl bg-dark-950 flex flex-col justify-between items-center text-center h-full">
+            <div className="relative rounded-3xl overflow-hidden glass-card border border-stone-200 dark:border-gold-500/40 p-6 sm:p-8 md:p-10 shadow-2xl bg-white dark:bg-dark-950 flex flex-col justify-between items-center text-center h-full">
               
               {/* Subtle top ambient glow */}
               <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-64 h-64 bg-gold/25 rounded-full blur-3xl pointer-events-none" />
 
               {/* Header inside card */}
-              <div className="w-full flex items-center justify-between border-b border-white/10 pb-4 mb-4">
-                <span className="text-[11px] font-mono font-semibold uppercase tracking-widest text-gold-300 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-gold" />
+              <div className="w-full flex items-center justify-between border-b border-stone-200 dark:border-white/10 pb-4 mb-4">
+                <span className="text-[11px] font-mono font-semibold uppercase tracking-widest text-gold-700 dark:text-gold-300 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-gold-600 dark:text-gold" />
                   Identidade Oficial
                 </span>
-                <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400 bg-white/5 px-2.5 py-0.5 rounded-full">
+                <span className="text-[10px] uppercase font-mono tracking-wider text-slate-600 dark:text-slate-400 bg-stone-100 dark:bg-white/5 px-2.5 py-0.5 rounded-full">
                   Agências Araújo
                 </span>
               </div>
@@ -59,23 +59,23 @@ export default function AboutSection() {
                 <img
                   src="/images/logo-transparent.png"
                   alt="Logo Oficial Agências Araújo"
-                  className="w-full max-h-[380px] object-contain drop-shadow-[0_15px_35px_rgba(212,175,55,0.3)] transition-transform duration-500 hover:scale-105"
+                  className="w-full max-h-[380px] object-contain drop-shadow-[0_15px_35px_rgba(212,175,55,0.3)] transition-transform duration-500 hover:scale-105 mix-blend-multiply dark:mix-blend-screen"
                 />
               </div>
 
               {/* Bottom Details */}
-              <div className="w-full pt-4 border-t border-white/10">
-                <p className="font-script text-2xl sm:text-3xl text-gold-300 mb-3 drop-shadow-sm">
+              <div className="w-full pt-4 border-t border-stone-200 dark:border-white/10">
+                <p className="font-script text-2xl sm:text-3xl text-gold-700 dark:text-gold-300 mb-3 drop-shadow-sm">
                   "{CONTACT_INFO.tagline}"
                 </p>
 
-                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-md mx-auto mb-4">
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-md mx-auto mb-4">
                   Marca consolidada no Rio de Janeiro, unindo arte, técnica e emoção na criação de acervos visuais que permanecem vivos por gerações.
                 </p>
 
-                <div className="inline-flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-slate-400 bg-dark-900/90 border border-slate-800 px-4 py-1.5 rounded-full">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                  <MapPin className="w-3.5 h-3.5 text-gold" />
+                <div className="inline-flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-slate-700 dark:text-slate-400 bg-stone-100 dark:bg-dark-900/90 border border-stone-300 dark:border-slate-800 px-4 py-1.5 rounded-full shadow-sm">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-ping" />
+                  <MapPin className="w-3.5 h-3.5 text-gold-600 dark:text-gold" />
                   <span>Rio de Janeiro • RJ</span>
                 </div>
               </div>
@@ -87,20 +87,20 @@ export default function AboutSection() {
           <div className="lg:col-span-7 flex flex-col justify-between">
             
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold/10 border border-gold/30 text-gold-light text-xs font-semibold uppercase tracking-widest mb-4">
-                <Award className="w-3.5 h-3.5 text-gold" />
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold-50 dark:bg-gold/10 border border-gold-300 dark:border-gold/30 text-gold-800 dark:text-gold-light text-xs font-semibold uppercase tracking-widest mb-4">
+                <Award className="w-3.5 h-3.5 text-gold-600 dark:text-gold" />
                 <span>Nossa Essência</span>
               </div>
 
-              <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold text-white tracking-tight mb-6 leading-tight">
+              <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 dark:text-white tracking-tight mb-6 leading-tight">
                 Mais que fotos, eternizamos <span className="gold-text">o que faz o seu coração bater</span> mais forte.
               </h2>
 
-              <p className="text-base sm:text-lg text-slate-300 leading-relaxed mb-6">
+              <p className="text-base sm:text-lg text-slate-700 dark:text-slate-300 leading-relaxed mb-6">
                 A <strong>Agências Araújo</strong> nasceu da paixão por eternizar momentos irrepetíveis. Sabemos que os primeiros dias de um bebê passam em um piscar de olhos, que um casamento é a celebração de uma vida inteira e que cada pessoa carrega uma beleza singular que merece ser revelada com respeito e estilo.
               </p>
 
-              <p className="text-sm sm:text-base text-slate-400 leading-relaxed mb-8">
+              <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed mb-8">
                 Nosso diferencial reside no acolhimento caloroso e no profissionalismo absoluto. Nossos ensaios não são rotinas mecânicas: são momentos prazerosos, descontraídos e emocionantes onde você se sente verdadeiramente à vontade.
               </p>
             </div>
@@ -110,13 +110,13 @@ export default function AboutSection() {
               {pillars.map((p, idx) => {
                 const Icon = p.icon;
                 return (
-                  <div key={idx} className="p-4 rounded-xl bg-dark-900/80 border border-slate-800 hover:border-gold-500/30 transition-all flex items-start gap-3.5">
-                    <div className="w-10 h-10 rounded-lg bg-gold/15 flex items-center justify-center text-gold shrink-0">
+                  <div key={idx} className="p-4 rounded-xl bg-white dark:bg-dark-900/80 border border-stone-200 dark:border-slate-800 hover:border-gold-500/40 transition-all flex items-start gap-3.5 shadow-sm hover:shadow-md">
+                    <div className="w-10 h-10 rounded-lg bg-gold/15 flex items-center justify-center text-gold-700 dark:text-gold shrink-0">
                       <Icon className="w-5 h-5" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-white mb-1">{p.title}</h4>
-                      <p className="text-xs text-slate-400 leading-relaxed">{p.desc}</p>
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1">{p.title}</h4>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{p.desc}</p>
                     </div>
                   </div>
                 );

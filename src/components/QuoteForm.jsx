@@ -83,7 +83,7 @@ export default function QuoteForm() {
   };
 
   return (
-    <section id="orcamento" className="py-24 relative overflow-hidden bg-dark-950 w-full">
+    <section id="orcamento" className="py-24 relative overflow-hidden bg-[#FAF9F6] dark:bg-dark-950 w-full transition-colors duration-300">
       {/* Background Lighting */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-gold-glow pointer-events-none -z-10" />
 
@@ -94,16 +94,16 @@ export default function QuoteForm() {
           {/* Left Column: Direct Contact Info & Assurance */}
           <div className="lg:col-span-5 flex flex-col justify-between">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold/10 border border-gold/30 text-gold-light text-xs font-semibold uppercase tracking-widest mb-4">
-                <Sparkles className="w-3.5 h-3.5 text-gold" />
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold-50 dark:bg-gold/10 border border-gold-300 dark:border-gold/30 text-gold-800 dark:text-gold-light text-xs font-semibold uppercase tracking-widest mb-4">
+                <Sparkles className="w-3.5 h-3.5 text-gold-600 dark:text-gold" />
                 <span>Atendimento Personalizado</span>
               </div>
 
-              <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold text-white tracking-tight mb-6">
+              <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 dark:text-white tracking-tight mb-6">
                 Solicite Seu <span className="gold-text">Orçamento</span> Sem Compromisso
               </h2>
 
-              <p className="text-base text-slate-300 leading-relaxed mb-8">
+              <p className="text-base text-slate-700 dark:text-slate-300 leading-relaxed mb-8">
                 Preencha o formulário ao lado e nossa equipe entrará em contato prontamente com a proposta sob medida para eternizar seu momento.
               </p>
 
@@ -113,14 +113,14 @@ export default function QuoteForm() {
                   href={`https://wa.me/${CONTACT_INFO.whatsapp.number}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-4 p-4 rounded-2xl glass-card border border-slate-800 hover:border-emerald-500/50 transition-all group"
+                  className="flex items-center gap-4 p-4 rounded-2xl glass-card border border-stone-200 dark:border-slate-800 hover:border-emerald-500/50 transition-all group shadow-sm"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <WhatsAppIcon className="w-6 h-6 fill-emerald-400 text-emerald-400" />
+                  <div className="w-12 h-12 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <WhatsAppIcon className="w-6 h-6 fill-emerald-500 dark:fill-emerald-400 text-emerald-500 dark:text-emerald-400" />
                   </div>
                   <div>
-                    <span className="text-xs text-slate-400 uppercase tracking-wider block">WhatsApp Direto</span>
-                    <span className="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider block font-medium">WhatsApp Direto</span>
+                    <span className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                       {CONTACT_INFO.whatsapp.display}
                     </span>
                   </div>
@@ -128,14 +128,14 @@ export default function QuoteForm() {
 
                 <a
                   href={`mailto:${CONTACT_INFO.email.address}`}
-                  className="flex items-center gap-4 p-4 rounded-2xl glass-card border border-slate-800 hover:border-gold-500/50 transition-all group"
+                  className="flex items-center gap-4 p-4 rounded-2xl glass-card border border-stone-200 dark:border-slate-800 hover:border-gold-500/50 transition-all group shadow-sm"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-gold/20 text-gold flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <div className="w-12 h-12 rounded-xl bg-gold/20 text-gold-700 dark:text-gold flex items-center justify-center group-hover:scale-110 transition-transform">
                     <Mail className="w-6 h-6" />
                   </div>
                   <div>
-                    <span className="text-xs text-slate-400 uppercase tracking-wider block">E-mail Oficial</span>
-                    <span className="text-sm font-bold text-white group-hover:text-gold transition-colors">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider block font-medium">E-mail Oficial</span>
+                    <span className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-gold-600 dark:group-hover:text-gold transition-colors">
                       {CONTACT_INFO.email.address}
                     </span>
                   </div>
@@ -144,12 +144,12 @@ export default function QuoteForm() {
             </div>
 
             {/* Quick trust box */}
-            <div className="p-5 rounded-2xl bg-dark-900/90 border border-gold-500/30">
-              <div className="flex items-center gap-2 text-gold text-xs font-bold uppercase tracking-wider mb-1">
+            <div className="p-5 rounded-2xl bg-stone-100 dark:bg-dark-900/90 border border-stone-300 dark:border-gold-500/30 shadow-sm">
+              <div className="flex items-center gap-2 text-gold-700 dark:text-gold text-xs font-bold uppercase tracking-wider mb-1">
                 <Clock className="w-4 h-4" />
                 <span>Resposta Rápida</span>
               </div>
-              <p className="text-xs text-slate-300">
+              <p className="text-xs text-slate-600 dark:text-slate-300">
                 Respondemos todas as mensagens com atenção individualizada e opções de pacotes adaptados ao seu sonho.
               </p>
             </div>
@@ -157,7 +157,7 @@ export default function QuoteForm() {
 
           {/* Right Column: Interactive Form */}
           <div className="lg:col-span-7">
-            <div className="rounded-3xl glass-card border border-gold-500/30 p-8 sm:p-10 shadow-2xl relative">
+            <div className="rounded-3xl glass-card border border-stone-200 dark:border-gold-500/30 p-8 sm:p-10 shadow-2xl relative">
               
               {submitted ? (
                 <div className="py-12 text-center flex flex-col items-center">
@@ -207,11 +207,11 @@ export default function QuoteForm() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     {/* Nome */}
                     <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
                         Seu Nome Completo *
                       </label>
                       <div className="relative">
-                        <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <User className="w-4 h-4 text-slate-500 dark:text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                         <input
                           type="text"
                           name="name"
@@ -219,18 +219,18 @@ export default function QuoteForm() {
                           value={formData.name}
                           onChange={handleChange}
                           placeholder="Ex: Mariana Silva"
-                          className="w-full pl-10 pr-4 py-3 rounded-xl bg-dark-950/80 border border-slate-700/80 focus:border-gold focus:outline-none text-white text-sm placeholder-slate-500 transition-colors"
+                          className="w-full pl-10 pr-4 py-3 rounded-xl bg-stone-50 dark:bg-dark-950/80 border border-stone-300 dark:border-slate-700/80 focus:border-gold-600 dark:focus:border-gold focus:outline-none text-slate-900 dark:text-white text-sm placeholder-slate-400 dark:placeholder-slate-500 transition-colors"
                         />
                       </div>
                     </div>
 
                     {/* WhatsApp */}
                     <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
                         Telefone / WhatsApp *
                       </label>
                       <div className="relative">
-                        <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <Phone className="w-4 h-4 text-slate-500 dark:text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                         <input
                           type="tel"
                           name="phone"
@@ -238,7 +238,7 @@ export default function QuoteForm() {
                           value={formData.phone}
                           onChange={handlePhoneChange}
                           placeholder="(21) 99999-9999"
-                          className="w-full pl-10 pr-4 py-3 rounded-xl bg-dark-950/80 border border-slate-700/80 focus:border-gold focus:outline-none text-white text-sm placeholder-slate-500 transition-colors"
+                          className="w-full pl-10 pr-4 py-3 rounded-xl bg-stone-50 dark:bg-dark-950/80 border border-stone-300 dark:border-slate-700/80 focus:border-gold-600 dark:focus:border-gold focus:outline-none text-slate-900 dark:text-white text-sm placeholder-slate-400 dark:placeholder-slate-500 transition-colors"
                         />
                       </div>
                     </div>
@@ -247,32 +247,32 @@ export default function QuoteForm() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     {/* E-mail */}
                     <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
                         Seu E-mail
                       </label>
                       <div className="relative">
-                        <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <Mail className="w-4 h-4 text-slate-500 dark:text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                         <input
                           type="email"
                           name="email"
                           value={formData.email}
                           onChange={handleChange}
                           placeholder="seuemail@exemplo.com"
-                          className="w-full pl-10 pr-4 py-3 rounded-xl bg-dark-950/80 border border-slate-700/80 focus:border-gold focus:outline-none text-white text-sm placeholder-slate-500 transition-colors"
+                          className="w-full pl-10 pr-4 py-3 rounded-xl bg-stone-50 dark:bg-dark-950/80 border border-stone-300 dark:border-slate-700/80 focus:border-gold-600 dark:focus:border-gold focus:outline-none text-slate-900 dark:text-white text-sm placeholder-slate-400 dark:placeholder-slate-500 transition-colors"
                         />
                       </div>
                     </div>
 
                     {/* Serviço de Interesse */}
                     <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
                         Serviço Desejado *
                       </label>
                       <select
                         name="service"
                         value={formData.service}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 rounded-xl bg-dark-950/80 border border-slate-700/80 focus:border-gold focus:outline-none text-white text-sm transition-colors"
+                        className="w-full px-4 py-3 rounded-xl bg-stone-50 dark:bg-dark-950/80 border border-stone-300 dark:border-slate-700/80 focus:border-gold-600 dark:focus:border-gold focus:outline-none text-slate-900 dark:text-white text-sm transition-colors"
                       >
                         <option value="Newborn & Bebês">Newborn & Bebês</option>
                         <option value="Ensaio Feminino / Moda">Ensaio Feminino / Moda</option>
@@ -288,29 +288,29 @@ export default function QuoteForm() {
 
                   {/* Data Prevista */}
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
                       Data ou Período Previsto (Opcional)
                     </label>
                     <div className="relative">
-                      <Calendar className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <Calendar className="w-4 h-4 text-slate-500 dark:text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input
                         type="text"
                         name="date"
                         value={formData.date}
                         onChange={handleChange}
                         placeholder="Ex: Próximo mês / Outubro / A definir"
-                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-dark-950/80 border border-slate-700/80 focus:border-gold focus:outline-none text-white text-sm placeholder-slate-500 transition-colors"
+                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-stone-50 dark:bg-dark-950/80 border border-stone-300 dark:border-slate-700/80 focus:border-gold-600 dark:focus:border-gold focus:outline-none text-slate-900 dark:text-white text-sm placeholder-slate-400 dark:placeholder-slate-500 transition-colors"
                       />
                     </div>
                   </div>
 
                   {/* Mensagem */}
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
                       Conte-nos sobre o que você deseja registrar *
                     </label>
                     <div className="relative">
-                      <FileText className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                      <FileText className="w-4 h-4 text-slate-500 dark:text-slate-400 absolute left-3.5 top-3.5" />
                       <textarea
                         name="message"
                         required
@@ -318,7 +318,7 @@ export default function QuoteForm() {
                         value={formData.message}
                         onChange={handleChange}
                         placeholder="Descreva detalhes como local, quantidade de pessoas, se é estúdio ou externa, e suas dúvidas principais..."
-                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-dark-950/80 border border-slate-700/80 focus:border-gold focus:outline-none text-white text-sm placeholder-slate-500 transition-colors resize-none"
+                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-stone-50 dark:bg-dark-950/80 border border-stone-300 dark:border-slate-700/80 focus:border-gold-600 dark:focus:border-gold focus:outline-none text-slate-900 dark:text-white text-sm placeholder-slate-400 dark:placeholder-slate-500 transition-colors resize-none"
                       />
                     </div>
                   </div>

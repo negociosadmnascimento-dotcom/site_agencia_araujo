@@ -44,7 +44,7 @@ export default function Differentials() {
   ];
 
   return (
-    <section id="diferenciais" className="relative py-24 bg-dark-900/60 overflow-hidden border-y border-slate-800/60 w-full">
+    <section id="diferenciais" className="relative py-24 bg-stone-50/60 dark:bg-dark-900/60 overflow-hidden border-y border-stone-200 dark:border-slate-800/60 w-full transition-colors duration-300">
       {/* Background glow */}
       <div className="absolute top-1/2 left-0 w-96 h-96 bg-gold-glow pointer-events-none -z-10" />
 
@@ -52,14 +52,14 @@ export default function Differentials() {
         
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold/10 border border-gold/30 text-gold-light text-xs font-semibold uppercase tracking-widest mb-3">
-            <Sparkles className="w-3.5 h-3.5 text-gold" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold-50 dark:bg-gold/10 border border-gold-300 dark:border-gold/30 text-gold-800 dark:text-gold-light text-xs font-semibold uppercase tracking-widest mb-3">
+            <Sparkles className="w-3.5 h-3.5 text-gold-600 dark:text-gold" />
             <span>Por que escolher a Agências Araújo?</span>
           </div>
-          <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold text-white tracking-tight">
+          <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 dark:text-white tracking-tight">
             Nossos <span className="gold-text">Diferenciais</span> de Excelência
           </h2>
-          <p className="mt-4 text-base sm:text-lg text-slate-300">
+          <p className="mt-4 text-base sm:text-lg text-slate-600 dark:text-slate-300">
             Mais do que simples cliques: criamos uma vivência memorável e personalizada para você e sua família no Rio de Janeiro.
           </p>
         </div>
@@ -71,7 +71,7 @@ export default function Differentials() {
             return (
               <div
                 key={item.id}
-                className="group relative rounded-2xl glass-card p-7 transition-all duration-300 hover:-translate-y-2 hover:border-gold-500/40 hover:shadow-2xl hover:shadow-gold/10 flex flex-col justify-between"
+                className="group relative rounded-2xl glass-card p-7 transition-all duration-300 hover:-translate-y-2 hover:border-gold-500/50 hover:shadow-2xl flex flex-col justify-between"
               >
                 {/* Accent glow on hover */}
                 <div className={`absolute inset-0 rounded-2xl bg-gradient-to-b ${item.color} opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none`} />
@@ -79,10 +79,10 @@ export default function Differentials() {
                 <div>
                   {/* Top Bar */}
                   <div className="flex items-center justify-between mb-6">
-                    <div className="w-12 h-12 rounded-xl bg-dark-950/80 border border-white/10 flex items-center justify-center text-gold group-hover:scale-110 transition-transform">
+                    <div className="w-12 h-12 rounded-xl bg-stone-100 dark:bg-dark-950/80 border border-stone-200 dark:border-white/10 flex items-center justify-center text-gold group-hover:scale-110 transition-transform shadow-sm">
                       <Icon className={`w-6 h-6 ${item.accent}`} />
                     </div>
-                    <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-slate-400 bg-white/5 px-2.5 py-1 rounded-md">
+                    <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 bg-stone-100 dark:bg-white/5 px-2.5 py-1 rounded-md">
                       0{item.id}
                     </span>
                   </div>
@@ -91,16 +91,16 @@ export default function Differentials() {
                     {item.tag}
                   </span>
 
-                  <h3 className="text-xl font-bold text-white mb-3 group-hover:text-gold-light transition-colors leading-snug">
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3 group-hover:text-gold-700 dark:group-hover:text-gold-light transition-colors leading-snug">
                     {item.title}
                   </h3>
 
-                  <p className="text-sm text-slate-300 leading-relaxed">
+                  <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                     {item.description}
                   </p>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-white/5 flex items-center gap-1.5 text-xs font-medium text-gold">
+                <div className="mt-6 pt-4 border-t border-stone-200 dark:border-white/5 flex items-center gap-1.5 text-xs font-medium text-gold-700 dark:text-gold">
                   <CheckCircle className="w-3.5 h-3.5" />
                   <span>Padrão Oficial Agências Araújo</span>
                 </div>
@@ -110,7 +110,7 @@ export default function Differentials() {
         </div>
 
         {/* Highlight Banner featuring original lens visual (Anexo 1) */}
-        <div className="relative rounded-3xl overflow-hidden border border-gold-500/30 bg-dark-950 shadow-2xl">
+        <div className="relative rounded-3xl overflow-hidden border border-stone-200 dark:border-gold-500/30 bg-white dark:bg-dark-950 shadow-xl">
           <div className="grid grid-cols-1 lg:grid-cols-12 items-center">
             
             {/* Visual side */}
@@ -120,19 +120,19 @@ export default function Differentials() {
                 alt="Agências Araújo - Fotografia Profissional em Ação"
                 className="w-full h-full object-cover object-top sm:object-center transition-transform duration-700 hover:scale-105"
               />
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-dark-950/30 to-dark-950 lg:block hidden" />
-              <div className="absolute inset-0 bg-gradient-to-t from-dark-950 via-transparent to-transparent lg:hidden block" />
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-dark-950/30 to-dark-950 lg:block hidden dark:block" />
+              <div className="absolute inset-0 bg-gradient-to-t from-dark-950 via-transparent to-transparent lg:hidden block dark:block" />
             </div>
 
             {/* Content side */}
             <div className="lg:col-span-6 p-8 lg:p-12 flex flex-col items-start">
-              <span className="text-xs uppercase font-mono tracking-widest text-gold-300 mb-2">
+              <span className="text-xs uppercase font-mono tracking-widest text-gold-700 dark:text-gold-300 mb-2 font-semibold">
                 Compromisso com o Seu Momento
               </span>
-              <h3 className="text-2xl sm:text-3xl font-bold font-display text-white mb-4">
+              <h3 className="text-2xl sm:text-3xl font-bold font-display text-slate-900 dark:text-white mb-4">
                 Sua história merece ser contada com arte e perfeição.
               </h3>
-              <p className="text-sm sm:text-base text-slate-300 mb-6 leading-relaxed">
+              <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
                 Cada ensaio é planejado de forma individual, respeitando o seu tempo, o ritmo dos bebês e a emoção dos noivos e convidados.
               </p>
               
@@ -149,9 +149,9 @@ export default function Differentials() {
                   href={`https://wa.me/${CONTACT_INFO.whatsapp.number}?text=${encodeURIComponent("Olá! Vi os diferenciais da Agências Araújo e gostaria de tirar algumas dúvidas sobre os pacotes.")}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 hover:text-white text-xs font-semibold uppercase tracking-wider border border-slate-700 transition-all hover:border-emerald-500/50"
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-stone-100 hover:bg-stone-200 dark:bg-slate-800/80 dark:hover:bg-slate-700/80 text-slate-800 dark:text-slate-200 hover:text-dark-950 dark:hover:text-white text-xs font-semibold uppercase tracking-wider border border-stone-300 dark:border-slate-700 transition-all hover:border-emerald-500/50 shadow-sm"
                 >
-                  <WhatsAppIcon className="w-4 h-4 text-emerald-400 fill-emerald-400" />
+                  <WhatsAppIcon className="w-4 h-4 text-emerald-500 dark:text-emerald-400 fill-emerald-500 dark:fill-emerald-400" />
                   <span>Tirar Dúvidas no WhatsApp</span>
                 </a>
               </div>

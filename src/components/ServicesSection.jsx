@@ -76,14 +76,14 @@ export default function ServicesSection() {
         
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold/10 border border-gold/30 text-gold-light text-xs font-semibold uppercase tracking-widest mb-3">
-            <Sparkles className="w-3.5 h-3.5 text-gold" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold-50 dark:bg-gold/10 border border-gold-300 dark:border-gold/30 text-gold-800 dark:text-gold-light text-xs font-semibold uppercase tracking-widest mb-3">
+            <Sparkles className="w-3.5 h-3.5 text-gold-600 dark:text-gold" />
             <span>Nossas Especialidades Oficiais</span>
           </div>
-          <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold text-white tracking-tight">
+          <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 dark:text-white tracking-tight">
             Serviços com a Assinatura <span className="gold-text">Agências Araújo</span>
           </h2>
-          <p className="mt-4 text-base sm:text-lg text-slate-300">
+          <p className="mt-4 text-base sm:text-lg text-slate-600 dark:text-slate-300">
             Conheça as áreas de atuação em destaque, executadas com amor à arte e perfeccionismo técnico.
           </p>
         </div>
@@ -95,7 +95,7 @@ export default function ServicesSection() {
             return (
               <div
                 key={service.id}
-                className="rounded-3xl overflow-hidden glass-card border border-slate-800 hover:border-gold-500/40 transition-all duration-300 group flex flex-col justify-between"
+                className="rounded-3xl overflow-hidden glass-card border border-stone-200 dark:border-slate-800 hover:border-gold-500/50 transition-all duration-300 group flex flex-col justify-between shadow-lg"
               >
                 {/* Image Header */}
                 <div className="relative h-64 overflow-hidden bg-slate-900">
@@ -129,21 +129,21 @@ export default function ServicesSection() {
                 {/* Content Body */}
                 <div className="p-6 sm:p-8 flex-1 flex flex-col justify-between">
                   <div>
-                    <p className="text-sm sm:text-base text-slate-300 mb-6 leading-relaxed">
+                    <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
                       {service.description}
                     </p>
 
                     <div className="space-y-2.5 mb-8">
                       {service.features.map((feat, idx) => (
-                        <div key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-300">
-                          <CheckCircle2 className="w-4 h-4 text-gold shrink-0 mt-0.5" />
+                        <div key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
+                          <CheckCircle2 className="w-4 h-4 text-gold-600 dark:text-gold shrink-0 mt-0.5" />
                           <span>{feat}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  <div className="pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="pt-6 border-t border-stone-200 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <a
                       href="#orcamento"
                       className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gold-gradient text-dark-950 font-bold text-xs uppercase tracking-wider hover:brightness-110 transition-all shadow-md shadow-gold/20"
@@ -156,9 +156,9 @@ export default function ServicesSection() {
                       href={`https://wa.me/${CONTACT_INFO.whatsapp.number}?text=${encodeURIComponent(`Olá, Agências Araújo! Gostaria de um orçamento para o serviço de ${service.title}.`)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs font-semibold text-slate-300 hover:text-emerald-400 transition-colors flex items-center gap-1.5"
+                      className="text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors flex items-center gap-1.5"
                     >
-                      <WhatsAppIcon className="w-3.5 h-3.5 text-emerald-400 fill-emerald-400" />
+                      <WhatsAppIcon className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400 fill-emerald-500 dark:fill-emerald-400" />
                       <span>Dúvidas via WhatsApp</span>
                     </a>
                   </div>
