@@ -1,5 +1,5 @@
 import React from 'react';
-import { Camera, Sparkles, ArrowRight, ShieldCheck, Heart, Award, Instagram, CheckCircle2 } from 'lucide-react';
+import { Camera, Sparkles, ArrowRight, ShieldCheck, Award, Instagram, CheckCircle2 } from 'lucide-react';
 import WhatsAppIcon from './icons/WhatsAppIcon';
 import { CONTACT_INFO } from '../config/contact';
 
@@ -138,17 +138,6 @@ export default function HeroSection() {
                       </a>
                     </div>
                   </div>
-                </div>
-              </div>
-
-              {/* Floating Badge (Emotional connection pillar from Anexo 1) */}
-              <div className="absolute -bottom-6 -left-6 bg-dark-900/95 backdrop-blur-md p-3.5 rounded-2xl border border-gold-500/40 shadow-2xl flex items-center gap-3 animate-float max-w-xs">
-                <div className="w-10 h-10 rounded-xl bg-gold/20 flex items-center justify-center text-gold shrink-0">
-                  <Heart className="w-5 h-5 fill-gold" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-white">Conexão & Emoção</p>
-                  <p className="text-[11px] text-slate-300 leading-tight">Abordagem leve e descontraída para ensaios inesquecíveis.</p>
                 </div>
               </div>
 
