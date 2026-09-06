@@ -3,6 +3,8 @@ export const CONTACT_INFO = {
   agencyName: "Agências Araújo",
   legalName: "Agências Araújo Fotografia & Eventos RJ",
   tagline: "eternizando momentos, contando histórias.",
+  website: "https://www.agenciasaraujo.com.br",
+  domain: "agenciasaraujo.com.br",
   
   // Instagram Oficial
   instagram: {
