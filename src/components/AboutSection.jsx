@@ -57,9 +57,14 @@ export default function AboutSection() {
               {/* Official Logo Display - Enlarged and occupying full div */}
               <div className="relative w-full flex-1 flex items-center justify-center py-6 px-2 my-auto">
                 <img
-                  src="/images/logo-transparent.png"
+                  src="/images/logo-butterfly-dark.png"
                   alt="Logo Oficial Agências Araújo"
-                  className="w-full max-h-[380px] object-contain drop-shadow-[0_15px_35px_rgba(212,175,55,0.3)] transition-transform duration-500 hover:scale-105 mix-blend-multiply dark:mix-blend-screen"
+                  className="w-full max-h-[360px] object-contain dark:hidden drop-shadow-md transition-transform duration-500 hover:scale-105"
+                />
+                <img
+                  src="/images/logo-butterfly-white.png"
+                  alt="Logo Oficial Agências Araújo"
+                  className="w-full max-h-[360px] object-contain hidden dark:block drop-shadow-[0_15px_35px_rgba(212,175,55,0.3)] transition-transform duration-500 hover:scale-105"
                 />
               </div>
 
@@ -87,8 +92,8 @@ export default function AboutSection() {
           <div className="lg:col-span-7 flex flex-col justify-between">
             
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold-50 dark:bg-gold/10 border border-gold-300 dark:border-gold/30 text-gold-800 dark:text-gold-light text-xs font-semibold uppercase tracking-widest mb-4">
-                <Award className="w-3.5 h-3.5 text-gold-600 dark:text-gold" />
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-100/90 dark:bg-gold/15 border border-amber-300/80 dark:border-gold/30 text-amber-950 dark:text-gold-300 text-xs font-bold uppercase tracking-widest mb-4 shadow-sm">
+                <Award className="w-3.5 h-3.5 text-amber-700 dark:text-gold" />
                 <span>Nossa Essência</span>
               </div>
 

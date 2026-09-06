@@ -23,8 +23,8 @@ export default function HeroSection() {
           {/* Left Column: Typography & CTAs */}
           <div className="lg:col-span-7 flex flex-col items-start text-left">
             {/* Top Badge */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gold-50 dark:bg-gold/10 border border-gold-300 dark:border-gold/30 text-gold-800 dark:text-gold-light text-xs font-semibold uppercase tracking-widest mb-6 backdrop-blur-sm shadow-sm animate-pulse-slow">
-              <Sparkles className="w-3.5 h-3.5 text-gold-600 dark:text-gold" />
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-100/90 dark:bg-gold/15 border border-amber-300/80 dark:border-gold/30 text-amber-950 dark:text-gold-300 text-xs font-bold uppercase tracking-widest mb-6 backdrop-blur-sm shadow-sm animate-pulse-slow">
+              <Sparkles className="w-3.5 h-3.5 text-amber-700 dark:text-gold" />
               <span>Agências Araújo • Fotografia & Eventos RJ</span>
             </div>
 

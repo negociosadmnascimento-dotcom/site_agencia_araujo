@@ -83,7 +83,7 @@ export default function QuoteForm() {
   };
 
   return (
-    <section id="orcamento" className="py-24 relative overflow-hidden bg-[#FAF9F6] dark:bg-dark-950 w-full transition-colors duration-300">
+    <section id="orcamento" className="py-24 relative overflow-hidden bg-stone-100/70 dark:bg-dark-950 w-full transition-colors duration-300">
       {/* Background Lighting */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-gold-glow pointer-events-none -z-10" />
 
@@ -94,8 +94,8 @@ export default function QuoteForm() {
           {/* Left Column: Direct Contact Info & Assurance */}
           <div className="lg:col-span-5 flex flex-col justify-between">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold-50 dark:bg-gold/10 border border-gold-300 dark:border-gold/30 text-gold-800 dark:text-gold-light text-xs font-semibold uppercase tracking-widest mb-4">
-                <Sparkles className="w-3.5 h-3.5 text-gold-600 dark:text-gold" />
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-100/90 dark:bg-gold/15 border border-amber-300/80 dark:border-gold/30 text-amber-950 dark:text-gold-300 text-xs font-bold uppercase tracking-widest mb-4 shadow-sm">
+                <Sparkles className="w-3.5 h-3.5 text-amber-700 dark:text-gold" />
                 <span>Atendimento Personalizado</span>
               </div>
 

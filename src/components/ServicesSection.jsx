@@ -68,7 +68,7 @@ export default function ServicesSection() {
   ];
 
   return (
-    <section id="servicos" className="py-24 relative overflow-hidden w-full">
+    <section id="servicos" className="py-24 relative overflow-hidden w-full bg-white dark:bg-transparent transition-colors duration-300">
       {/* Background radial */}
       <div className="absolute top-1/3 right-0 w-96 h-96 bg-gold-glow pointer-events-none -z-10" />
 
@@ -76,14 +76,14 @@ export default function ServicesSection() {
         
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold-50 dark:bg-gold/10 border border-gold-300 dark:border-gold/30 text-gold-800 dark:text-gold-light text-xs font-semibold uppercase tracking-widest mb-3">
-            <Sparkles className="w-3.5 h-3.5 text-gold-600 dark:text-gold" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-100/90 dark:bg-gold/15 border border-amber-300/80 dark:border-gold/30 text-amber-950 dark:text-gold-300 text-xs font-bold uppercase tracking-widest mb-3 shadow-sm">
+            <Sparkles className="w-3.5 h-3.5 text-amber-700 dark:text-gold" />
             <span>Nossas Especialidades Oficiais</span>
           </div>
           <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 dark:text-white tracking-tight">
             Serviços com a Assinatura <span className="gold-text">Agências Araújo</span>
           </h2>
-          <p className="mt-4 text-base sm:text-lg text-slate-600 dark:text-slate-300">
+          <p className="mt-4 text-base sm:text-lg text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
             Conheça as áreas de atuação em destaque, executadas com amor à arte e perfeccionismo técnico.
           </p>
         </div>

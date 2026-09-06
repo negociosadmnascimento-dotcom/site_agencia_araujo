@@ -35,13 +35,18 @@ export default function Navbar() {
       }`}
     >
       <div className="w-full px-4 sm:px-8 lg:px-12 xl:px-16 flex items-center justify-between">
-        {/* Logo sem fundo */}
-        <a href="#inicio" className="flex items-center gap-3 group">
+        {/* Logo sem fundo com suporte a modo Claro e Escuro */}
+        <a href="#inicio" className="flex items-center gap-3 group" title="Agências Araújo - Início">
           <div className="relative flex items-center">
             <img
-              src="/images/logo-transparent.png"
+              src="/images/logo-butterfly-dark.png"
               alt="Agências Araújo"
-              className="h-12 sm:h-14 md:h-16 w-auto object-contain mix-blend-multiply dark:mix-blend-screen transition-transform duration-300 group-hover:scale-105 drop-shadow-sm"
+              className="h-11 sm:h-13 md:h-14 w-auto object-contain dark:hidden transition-transform duration-300 group-hover:scale-105"
+            />
+            <img
+              src="/images/logo-butterfly-white.png"
+              alt="Agências Araújo"
+              className="h-11 sm:h-13 md:h-14 w-auto object-contain hidden dark:block transition-transform duration-300 group-hover:scale-105 drop-shadow-[0_0_12px_rgba(255,255,255,0.15)]"
             />
           </div>
         </a>

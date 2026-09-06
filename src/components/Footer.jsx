@@ -13,11 +13,16 @@ export default function Footer() {
           
           {/* Brand Info (Span 2) */}
           <div className="lg:col-span-2">
-            <a href="#inicio" className="inline-block mb-4">
+            <a href="#inicio" className="inline-block mb-4" title="Agências Araújo">
               <img
-                src="/images/logo-transparent.png"
+                src="/images/logo-butterfly-dark.png"
                 alt="Agências Araújo"
-                className="h-16 sm:h-20 w-auto object-contain mix-blend-multiply dark:mix-blend-screen drop-shadow-sm"
+                className="h-16 sm:h-20 w-auto object-contain dark:hidden"
+              />
+              <img
+                src="/images/logo-butterfly-white.png"
+                alt="Agências Araújo"
+                className="h-16 sm:h-20 w-auto object-contain hidden dark:block drop-shadow-[0_0_15px_rgba(255,255,255,0.15)]"
               />
             </a>
             
