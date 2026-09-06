@@ -8,18 +8,29 @@ export default function PortfolioSection() {
   const [selectedItem, setSelectedItem] = useState(null);
 
   const portfolioItems = [
-    // Retratos Pessoais (3 fotos oficiais - Anexo 3 como capa)
+    // Retratos Pessoais (3 fotos oficiais - Maracanã como capa do destaque)
+    {
+      id: 3,
+      title: "Cobertura em Grande Escala no Maracanã",
+      category: "retratos",
+      categoryLabel: "Retratos Pessoais",
+      image: "/images/retrato-maracana-estadio.jpg",
+      tag: "Capa do Destaque • Maracanã",
+      description: "Atuação dinâmica em coberturas de grande porte no icônico Estádio do Maracanã, com credenciamento oficial e equipamentos de alta performance fotográfica.",
+      details: "Estádio do Maracanã • Equipamento Completo DSLR • Cobertura Dinâmica de Eventos",
+      isCover: true,
+      albumCount: 3,
+    },
     {
       id: 1,
       title: "Cobertura de Evento com a Gente",
       category: "retratos",
       categoryLabel: "Retratos Pessoais",
       image: "/images/retrato-cobertura-equipe.jpg",
-      tag: "Capa do Destaque • Equipe",
+      tag: "Equipe Oficial em Ação",
       description: "Equipe Agências Araújo em ação para a cobertura completa e vibrante do seu evento no Rio de Janeiro, unindo simpatia, energia positiva e excelência técnica.",
       details: "Equipe Oficial Agências Araújo • Luz Natural Externa • Direção Acolhedora",
-      isCover: true,
-      albumCount: 3,
+      isCover: false,
     },
     {
       id: 2,
@@ -30,17 +41,6 @@ export default function PortfolioSection() {
       tag: "Locação Nobre RJ",
       description: "Registro profissional na fachada do emblemático Copacabana Palace, refletindo sofisticação, simpatia e a presença marcante da Agências Araújo em grandes eventos.",
       details: "Copacabana Palace RJ • Iluminação Natural de Alta Definição • Retrato Profissional",
-      isCover: false,
-    },
-    {
-      id: 3,
-      title: "Cobertura em Grande Escala no Maracanã",
-      category: "retratos",
-      categoryLabel: "Retratos Pessoais",
-      image: "/images/retrato-maracana-estadio.jpg",
-      tag: "Grandes Eventos RJ",
-      description: "Atuação dinâmica em coberturas de grande porte no icônico Estádio do Maracanã, com credenciamento oficial e equipamentos de alta performance fotográfica.",
-      details: "Estádio do Maracanã • Equipamento Completo DSLR • Cobertura Dinâmica de Eventos",
       isCover: false,
     },
 
