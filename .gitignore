@@ -4,3 +4,7 @@ dist
 .DS_Store
 .vercel
 .env*
+*Senha*
+*senha*
+*.pem
+*.key
