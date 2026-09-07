@@ -160,22 +160,9 @@ export default function Footer() {
         {/* Bottom copyright */}
         <div className="mt-12 pt-8 border-t border-stone-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
           <p>© {currentYear} {CONTACT_INFO.legalName}. Todos os direitos reservados.</p>
-          <div className="flex items-center gap-6">
-            <p className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
-              Feito com carinho para eternizar momentos no RJ.
-            </p>
-            <a
-              href="/login"
-              onClick={(e) => {
-                e.preventDefault();
-                window.dispatchEvent(new CustomEvent('navigate-view', { detail: 'login' }));
-              }}
-              className="text-slate-400 hover:text-gold-600 dark:hover:text-gold transition-colors inline-flex items-center gap-1 text-[11px] font-mono"
-              title="Acesso aos ambientes Admin e Super Admin"
-            >
-              <span>Área Restrita</span>
-            </a>
-          </div>
+          <p className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
+            Feito com carinho para eternizar momentos no RJ.
+          </p>
         </div>
       </div>
     </footer>

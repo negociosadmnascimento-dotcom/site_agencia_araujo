@@ -14,21 +14,26 @@ import Footer from './components/Footer';
 import LoginView from './components/admin/LoginView';
 import AdminLayout from './components/admin/AdminLayout';
 import { useAuth } from './context/AuthContext';
-import { Shield, Sparkles } from 'lucide-react';
 
 export default function App() {
-  const { isAuthenticated, isSuperAdmin, user } = useAuth();
+  const { isAuthenticated, isSuperAdmin, loginAs } = useAuth();
   
-  // Determine initial view from URL
+  // Determine initial view from URL path
   const getInitialView = () => {
     const path = window.location.pathname.toLowerCase();
     const hash = window.location.hash.toLowerCase();
-    if (path === '/admin' || hash === '#admin') {
+
+    // 1. Dedicated Super Admin Secret Path
+    if (path.startsWith('/super-admin') || path.startsWith('/superadmin') || hash === '#super-admin') {
+      return 'super_admin';
+    }
+
+    // 2. Dedicated Admin Operador Secret Path
+    if (path.startsWith('/admin') || path.startsWith('/gestao-admin') || hash === '#admin') {
       return 'admin';
     }
-    if (path === '/login' || hash === '#login') {
-      return 'login';
-    }
+
+    // 3. Default: 100% Public Site (no admin traces)
     return 'site';
   };
 
@@ -40,67 +45,43 @@ export default function App() {
       setCurrentView(getInitialView());
     };
 
-    const handleCustomNavigate = (e) => {
-      if (e.detail) {
-        navigateTo(e.detail);
-      }
-    };
-
     window.addEventListener('popstate', handlePopState);
-    window.addEventListener('navigate-view', handleCustomNavigate);
-
     return () => {
       window.removeEventListener('popstate', handlePopState);
-      window.removeEventListener('navigate-view', handleCustomNavigate);
     };
   }, []);
 
-  // If user is authenticated and is on login screen, redirect to admin
-  useEffect(() => {
-    if (isAuthenticated && currentView === 'login') {
-      navigateTo('admin');
-    }
-  }, [isAuthenticated, currentView]);
-
   const navigateTo = (view) => {
     setCurrentView(view);
-    const targetUrl = view === 'site' ? '/' : `/${view}`;
+    let targetUrl = '/';
+    if (view === 'super_admin') targetUrl = '/super-admin';
+    if (view === 'admin') targetUrl = '/admin';
+
     if (window.location.pathname !== targetUrl) {
       window.history.pushState({ view }, '', targetUrl);
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // 1. RENDER ADMIN LAYOUT IF IN ADMIN VIEW
-  if (currentView === 'admin') {
+  // 1. RENDER SUPER ADMIN VIEW (SEPARATE LINK: /super-admin)
+  if (currentView === 'super_admin') {
     if (!isAuthenticated) {
-      return <LoginView onBackToSite={() => navigateTo('site')} />;
+      return <LoginView portalMode="super_admin" onBackToSite={() => navigateTo('site')} />;
     }
     return <AdminLayout onBackToSite={() => navigateTo('site')} />;
   }
 
-  // 2. RENDER LOGIN VIEW IF IN LOGIN VIEW
-  if (currentView === 'login') {
-    return <LoginView onBackToSite={() => navigateTo('site')} />;
+  // 2. RENDER ADMIN VIEW (SEPARATE LINK: /admin)
+  if (currentView === 'admin') {
+    if (!isAuthenticated) {
+      return <LoginView portalMode="admin" onBackToSite={() => navigateTo('site')} />;
+    }
+    return <AdminLayout onBackToSite={() => navigateTo('site')} />;
   }
 
-  // 3. RENDER PUBLIC SITE
+  // 3. RENDER 100% PUBLIC SITE (COMPLETELY CLEAN - ZERO ADMIN BUTTONS/BADGES)
   return (
     <div className="min-h-screen bg-[#FAF9F6] dark:bg-dark-950 text-slate-900 dark:text-slate-100 flex flex-col selection:bg-gold-500 selection:text-black transition-colors duration-300">
-      
-      {/* If admin is logged in, show floating fast-access badge to return to Admin */}
-      {isAuthenticated && (
-        <div className="fixed top-20 right-4 z-40">
-          <button
-            onClick={() => navigateTo('admin')}
-            className="px-3.5 py-2 rounded-full bg-slate-900/90 hover:bg-slate-900 text-gold-300 border border-gold/40 shadow-xl shadow-gold/10 backdrop-blur-md text-xs font-mono font-bold flex items-center gap-2 hover:scale-105 transition-all"
-          >
-            <Shield className="w-3.5 h-3.5 text-gold" />
-            <span>Painel {isSuperAdmin ? 'Super Admin' : 'Admin'}</span>
-          </button>
-        </div>
-      )}
-
       {/* Header Navigation */}
       <Navbar />
 

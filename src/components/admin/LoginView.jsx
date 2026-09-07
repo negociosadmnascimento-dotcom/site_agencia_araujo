@@ -1,15 +1,22 @@
-import React, { useState } from 'react';
-import { Shield, Lock, Mail, ArrowRight, Sparkles, CheckCircle2, AlertCircle, ExternalLink, ArrowLeft, KeyRound } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Shield, Lock, Mail, ArrowRight, Sparkles, CheckCircle2, AlertCircle, ArrowLeft, KeyRound } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { isSupabaseConfigured, SUPABASE_PROJECT_ID } from '../../lib/supabase';
 
-export default function LoginView({ onBackToSite }) {
+export default function LoginView({ onBackToSite, portalMode = 'super_admin' }) {
   const { loginWithSupabase, loginAs } = useAuth();
-  const [activeTab, setActiveTab] = useState('super_admin'); // 'admin' or 'super_admin'
-  const [email, setEmail] = useState('');
+  const [activeTab, setActiveTab] = useState(portalMode); // 'admin' or 'super_admin'
+  const [email, setEmail] = useState(
+    portalMode === 'super_admin' ? 'negociosadm.nascimento@gmail.com' : 'admin@agenciasaraujo.com.br'
+  );
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  useEffect(() => {
+    setActiveTab(portalMode);
+    setEmail(portalMode === 'super_admin' ? 'negociosadm.nascimento@gmail.com' : 'admin@agenciasaraujo.com.br');
+  }, [portalMode]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,7 +27,6 @@ export default function LoginView({ onBackToSite }) {
       if (isSupabaseConfigured) {
         await loginWithSupabase(email, password);
       } else {
-        // If Supabase not yet configured with anon key, log in with chosen profile
         loginAs(activeTab);
       }
     } catch (err) {
@@ -33,6 +39,8 @@ export default function LoginView({ onBackToSite }) {
   const handleQuickLogin = (role) => {
     loginAs(role);
   };
+
+  const isSuperMode = portalMode === 'super_admin';
 
   return (
     <div className="min-h-screen bg-[#06080C] text-slate-100 flex flex-col justify-between relative overflow-hidden selection:bg-gold-500 selection:text-black">
@@ -73,54 +81,28 @@ export default function LoginView({ onBackToSite }) {
               alt="Agências Araújo"
               className="h-16 w-auto object-contain mb-3 drop-shadow-[0_0_20px_rgba(212,175,55,0.3)]"
             />
-            <span className="text-[11px] font-mono uppercase tracking-widest text-gold-300 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-gold" />
-              Painel de Gestão Oficial
-            </span>
-          </div>
-
-          {/* Role Tabs */}
-          <div className="grid grid-cols-2 gap-2 p-1.5 rounded-2xl bg-black/40 border border-white/10 mb-6">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('super_admin');
-                setEmail('negociosadm.nascimento@gmail.com');
-              }}
-              className={`py-2.5 px-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
-                activeTab === 'super_admin'
-                  ? 'bg-gold-gradient text-dark-950 shadow-md shadow-gold/20'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Shield className="w-3.5 h-3.5" />
-              <span>Super Admin</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('admin');
-                setEmail('admin@agenciasaraujo.com.br');
-              }}
-              className={`py-2.5 px-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
-                activeTab === 'admin'
-                  ? 'bg-gold-gradient text-dark-950 shadow-md shadow-gold/20'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <KeyRound className="w-3.5 h-3.5" />
-              <span>Admin</span>
-            </button>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gold/10 border border-gold/30 text-gold-300 text-[11px] font-mono uppercase tracking-widest">
+              {isSuperMode ? (
+                <>
+                  <Shield className="w-3.5 h-3.5 text-gold" />
+                  <span>Portal Exclusivo Direção Geral • Super Admin</span>
+                </>
+              ) : (
+                <>
+                  <KeyRound className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Portal Operacional • Admin de Produção</span>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Role badge explanation */}
           <div className="mb-6 p-3 rounded-xl bg-white/5 border border-white/10 text-xs text-slate-300 flex items-start gap-2.5">
             <CheckCircle2 className="w-4 h-4 text-gold shrink-0 mt-0.5" />
             <p>
-              {activeTab === 'super_admin'
-                ? 'Perfil Super Admin: Acesso irrestrito a todos os 13 módulos, incluindo financeiro, pagamentos, contratos e governança do site.'
-                : 'Perfil Admin: Acesso operacional aos módulos de atendimento (leads, clientes, agenda, propostas, portfólio e WhatsApp).'}
+              {isSuperMode
+                ? 'Ambiente de Governança Total: Gestão completa dos 13 módulos, visão cirúrgica de auditoria de uso de cada admin, financeiro e configurações.'
+                : 'Ambiente de Atendimento & Produção: Gestão operacional de leads, clientes, agendamento de ensaios, envio de propostas e WhatsApp.'}
             </p>
           </div>
 
@@ -145,8 +127,8 @@ export default function LoginView({ onBackToSite }) {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder={activeTab === 'super_admin' ? 'negociosadm.nascimento@gmail.com' : 'admin@agenciasaraujo.com.br'}
-                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-black/50 border border-slate-700/80 focus:border-gold focus:outline-none text-white text-sm placeholder-slate-500 transition-colors"
+                  placeholder={isSuperMode ? 'negociosadm.nascimento@gmail.com' : 'admin@agenciasaraujo.com.br'}
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-black/50 border border-slate-700/80 focus:border-gold focus:outline-none text-white text-sm placeholder-slate-500 transition-colors font-mono"
                 />
               </div>
             </div>
@@ -180,7 +162,7 @@ export default function LoginView({ onBackToSite }) {
                 </span>
               ) : (
                 <>
-                  <span>Entrar no Ambiente {activeTab === 'super_admin' ? 'Super Admin' : 'Admin'}</span>
+                  <span>Entrar como {isSuperMode ? 'Super Admin' : 'Admin'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -193,35 +175,37 @@ export default function LoginView({ onBackToSite }) {
               <div className="w-full border-t border-white/10" />
             </div>
             <span className="relative px-3 bg-slate-900 text-[11px] uppercase tracking-wider font-mono text-slate-400">
-              Ou Acesso Imediato de Demonstração
+              Acesso Rápido com 1 Clique
             </span>
           </div>
 
-          {/* 1-Click Demo Buttons */}
-          <div className="space-y-2.5">
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('super_admin')}
-              className="w-full py-2.5 px-4 rounded-xl bg-gold/10 hover:bg-gold/20 border border-gold/40 text-gold-300 hover:text-white text-xs font-semibold flex items-center justify-between transition-all"
-            >
-              <div className="flex items-center gap-2">
-                <Shield className="w-4 h-4 text-gold" />
-                <span>Entrar como <strong>Super Admin</strong> (Acesso Total)</span>
-              </div>
-              <span className="text-[10px] font-mono uppercase bg-gold/20 text-gold px-2 py-0.5 rounded">1-Click</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('admin')}
-              className="w-full py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-between transition-all"
-            >
-              <div className="flex items-center gap-2">
-                <KeyRound className="w-4 h-4 text-slate-400" />
-                <span>Entrar como <strong>Admin</strong> (Operacional)</span>
-              </div>
-              <span className="text-[10px] font-mono uppercase bg-white/10 text-slate-300 px-2 py-0.5 rounded">1-Click</span>
-            </button>
+          {/* 1-Click Demo Button for current portal */}
+          <div>
+            {isSuperMode ? (
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('super_admin')}
+                className="w-full py-3 px-4 rounded-xl bg-gold/10 hover:bg-gold/20 border border-gold/40 text-gold-300 hover:text-white text-xs font-semibold flex items-center justify-between transition-all"
+              >
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-gold" />
+                  <span>Entrar como <strong>Super Admin</strong> (Acesso Total)</span>
+                </div>
+                <span className="text-[10px] font-mono uppercase bg-gold/20 text-gold px-2 py-0.5 rounded">1-Click</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('admin')}
+                className="w-full py-3 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-between transition-all"
+              >
+                <div className="flex items-center gap-2">
+                  <KeyRound className="w-4 h-4 text-blue-400" />
+                  <span>Entrar como <strong>Admin</strong> (Operacional)</span>
+                </div>
+                <span className="text-[10px] font-mono uppercase bg-white/10 text-slate-300 px-2 py-0.5 rounded">1-Click</span>
+              </button>
+            )}
           </div>
 
         </div>

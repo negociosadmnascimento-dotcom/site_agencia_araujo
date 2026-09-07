@@ -43,6 +43,7 @@ html.dark ::-webkit-scrollbar-track {
 .gold-text {
   background: linear-gradient(135deg, #B4831B 0%, #854D0E 60%, #713F12 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -50,12 +51,14 @@ html.dark ::-webkit-scrollbar-track {
 html.dark .gold-text {
   background: linear-gradient(135deg, #FDE08D 0%, #D4AF37 40%, #AA7C11 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .gold-text-light {
   background: linear-gradient(135deg, #B4831B 0%, #92400E 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -63,6 +66,7 @@ html.dark .gold-text {
 html.dark .gold-text-light {
   background: linear-gradient(135deg, #FFF6D6 0%, #F3E5AB 50%, #D4AF37 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
