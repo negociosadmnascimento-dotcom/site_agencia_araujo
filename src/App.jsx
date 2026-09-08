@@ -4,6 +4,7 @@ import HeroSection from './components/HeroSection';
 import Differentials from './components/Differentials';
 import ServicesSection from './components/ServicesSection';
 import PortfolioSection from './components/PortfolioSection';
+import ScheduleSection from './components/ScheduleSection';
 import AboutSection from './components/AboutSection';
 import InstagramSection from './components/InstagramSection';
 import QuoteForm from './components/QuoteForm';
@@ -93,6 +94,7 @@ export default function App() {
         <Differentials />
         <ServicesSection />
         <PortfolioSection />
+        <ScheduleSection />
         <AboutSection />
         <InstagramSection />
         <QuoteForm />

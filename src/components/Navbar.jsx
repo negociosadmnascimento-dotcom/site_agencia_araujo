@@ -22,6 +22,7 @@ export default function Navbar() {
     { name: 'Diferenciais', href: '#diferenciais' },
     { name: 'Serviços', href: '#servicos' },
     { name: 'Portfólio', href: '#portfolio' },
+    { name: 'Agenda', href: '#agenda' },
     { name: 'Sobre Nós', href: '#sobre' },
     { name: 'Orçamento', href: '#orcamento' },
   ];

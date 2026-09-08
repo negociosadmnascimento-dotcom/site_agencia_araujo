@@ -1,29 +1,35 @@
-﻿import React, { useState } from "react";
-import { Send, CheckCircle2, Mail, Phone, User, Calendar, FileText, Sparkles, Clock, AlertCircle } from "lucide-react";
-import WhatsAppIcon from "./icons/WhatsAppIcon";
-import { CONTACT_INFO } from "../config/contact";
+import React, { useState } from 'react';
+import { Send, CheckCircle2, Mail, Phone, User, Calendar, FileText, Sparkles, Clock, AlertCircle } from 'lucide-react';
+import WhatsAppIcon from './icons/WhatsAppIcon';
+import { CONTACT_INFO } from '../config/contact';
 
 export default function QuoteForm() {
   const [formData, setFormData] = useState({
-    name: "",
-    phone: "",
-    email: "",
-    service: "Newborn & Bebês",
-    date: "",
-    message: "",
+    name: '',
+    phone: '',
+    email: '',
+    service: 'Newborn & Bebês',
+    date: '',
+    message: ''
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState('');
 
-  // Formata telefone enquanto digita
+  // Format phone input
   const handlePhoneChange = (e) => {
-    let val = e.target.value.replace(/\D/g, "");
+    let val = e.target.value.replace(/\D/g, '');
     if (val.length > 11) val = val.slice(0, 11);
-    if (val.length > 6) val = `(${val.slice(0, 2)}) ${val.slice(2, 7)}-${val.slice(7)}`;
-    else if (val.length > 2) val = `(${val.slice(0, 2)}) ${val.slice(2)}`;
-    else if (val.length > 0) val = `(${val}`;
+
+    if (val.length > 6) {
+      val = `(${val.slice(0, 2)}) ${val.slice(2, 7)}-${val.slice(7)}`;
+    } else if (val.length > 2) {
+      val = `(${val.slice(0, 2)}) ${val.slice(2)}`;
+    } else if (val.length > 0) {
+      val = `(${val}`;
+    }
+
     setFormData({ ...formData, phone: val });
   };
 
@@ -34,22 +40,22 @@ export default function QuoteForm() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setErrorMessage("");
+    setErrorMessage('');
 
     if (!formData.name.trim() || !formData.phone.trim() || !formData.message.trim()) {
-      setErrorMessage("Por favor, preencha nome, telefone e sua mensagem para continuar.");
+      setErrorMessage('Por favor, preencha nome, telefone e sua mensagem para continuar.');
       return;
     }
 
     setIsSubmitting(true);
 
-    const formattedMessage =
-      `*NOVA SOLICITAÇÃO DE ORÇAMENTO - AGÊNCIAS ARAÚJO*\n\n` +
+    // Prepare formatted message for Agências Araújo
+    const formattedMessage = `*NOVA SOLICITAÇÃO DE ORÇAMENTO - AGÊNCIAS ARAÚJO*\n\n` +
       `👤 *Nome:* ${formData.name}\n` +
       `📱 *Telefone/WhatsApp:* ${formData.phone}\n` +
-      `📧 *E-mail:* ${formData.email || "Não informado"}\n` +
+      `📧 *E-mail:* ${formData.email || 'Não informado'}\n` +
       `📸 *Serviço de Interesse:* ${formData.service}\n` +
-      `📅 *Data Prevista:* ${formData.date || "A combinar"}\n\n` +
+      `📅 *Data Prevista:* ${formData.date || 'A combinar'}\n\n` +
       `💬 *Mensagem / Detalhes:*\n${formData.message}\n\n` +
       `_Enviado através do site oficial Agências Araújo_`;
 
@@ -58,44 +64,34 @@ export default function QuoteForm() {
     setTimeout(() => {
       setIsSubmitting(false);
       setSubmitted(true);
-
-      // Bridge: persiste no localStorage para o painel admin ler
-      try {
-        const existing = JSON.parse(localStorage.getItem("site_form_submissions") || "[]");
-        existing.unshift({
-          id: "sub_" + Date.now(),
-          name: formData.name,
-          email: formData.email || "",
-          phone: formData.phone,
-          service: formData.service,
-          eventDate: formData.date || "",
-          message: formData.message,
-          createdAt: new Date().toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }),
-          read: false,
-          source: "Formulário do Site",
-        });
-        localStorage.setItem("site_form_submissions", JSON.stringify(existing));
-      } catch (_) {}
-
-      // Abre WhatsApp automaticamente
-      window.open(whatsappUrl, "_blank");
+      
+      // Open WhatsApp automatically in a new tab
+      window.open(whatsappUrl, '_blank');
     }, 600);
   };
 
   const resetForm = () => {
-    setFormData({ name: "", phone: "", email: "", service: "Newborn & Bebês", date: "", message: "" });
+    setFormData({
+      name: '',
+      phone: '',
+      email: '',
+      service: 'Newborn & Bebês',
+      date: '',
+      message: ''
+    });
     setSubmitted(false);
   };
 
   return (
     <section id="orcamento" className="py-24 relative overflow-hidden bg-stone-100/70 dark:bg-dark-950 w-full transition-colors duration-300">
-      {/* Background glow */}
+      {/* Background Lighting */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-gold-glow pointer-events-none -z-10" />
 
       <div className="w-full px-4 sm:px-8 lg:px-12 xl:px-16 2xl:px-20">
+        
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-
-          {/* Coluna esquerda — canais de contato */}
+          
+          {/* Left Column: Direct Contact Info & Assurance */}
           <div className="lg:col-span-5 flex flex-col justify-between">
             <div>
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-100/90 dark:bg-gold/15 border border-amber-300/80 dark:border-gold/30 text-amber-950 dark:text-gold-300 text-xs font-bold uppercase tracking-widest mb-4 shadow-sm">
@@ -111,7 +107,7 @@ export default function QuoteForm() {
                 Preencha o formulário ao lado e nossa equipe entrará em contato prontamente com a proposta sob medida para eternizar seu momento.
               </p>
 
-              {/* Canais diretos */}
+              {/* Direct channels */}
               <div className="space-y-4 mb-8">
                 <a
                   href={`https://wa.me/${CONTACT_INFO.whatsapp.number}`}
@@ -147,7 +143,7 @@ export default function QuoteForm() {
               </div>
             </div>
 
-            {/* Trust box */}
+            {/* Quick trust box */}
             <div className="p-5 rounded-2xl bg-stone-100 dark:bg-dark-900/90 border border-stone-300 dark:border-gold-500/30 shadow-sm">
               <div className="flex items-center gap-2 text-gold-700 dark:text-gold text-xs font-bold uppercase tracking-wider mb-1">
                 <Clock className="w-4 h-4" />
@@ -159,12 +155,11 @@ export default function QuoteForm() {
             </div>
           </div>
 
-          {/* Coluna direita — formulário interativo */}
+          {/* Right Column: Interactive Form */}
           <div className="lg:col-span-7">
             <div className="rounded-3xl glass-card border border-stone-200 dark:border-gold-500/30 p-8 sm:p-10 shadow-2xl relative">
-
+              
               {submitted ? (
-                /* Estado de sucesso */
                 <div className="py-12 text-center flex flex-col items-center">
                   <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center mb-6">
                     <CheckCircle2 className="w-8 h-8" />
@@ -175,8 +170,7 @@ export default function QuoteForm() {
                   </h3>
 
                   <p className="text-sm text-slate-600 dark:text-slate-300 max-w-md mb-6">
-                    Sua solicitação de orçamento foi estruturada e aberta no WhatsApp da{" "}
-                    <strong>Agências Araújo</strong>. Caso a janela não tenha aberto automaticamente, clique no botão abaixo.
+                    Sua solicitação de orçamento foi estruturada e aberta no WhatsApp da <strong>Agências Araújo</strong>. Caso a janela não tenha aberto automaticamente, clique no botão abaixo.
                   </p>
 
                   <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
@@ -201,9 +195,8 @@ export default function QuoteForm() {
                   </div>
                 </div>
               ) : (
-                /* Formulário */
                 <form onSubmit={handleSubmit} className="space-y-6">
-
+                  
                   {errorMessage && (
                     <div className="p-4 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-2">
                       <AlertCircle className="w-4 h-4 shrink-0" />
@@ -231,7 +224,7 @@ export default function QuoteForm() {
                       </div>
                     </div>
 
-                    {/* Telefone */}
+                    {/* WhatsApp */}
                     <div>
                       <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
                         Telefone / WhatsApp *
@@ -270,7 +263,7 @@ export default function QuoteForm() {
                       </div>
                     </div>
 
-                    {/* Serviço */}
+                    {/* Serviço de Interesse */}
                     <div>
                       <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
                         Serviço Desejado *
@@ -330,7 +323,7 @@ export default function QuoteForm() {
                     </div>
                   </div>
 
-                  {/* Botão de envio */}
+                  {/* Submit Button */}
                   <button
                     type="submit"
                     disabled={isSubmitting}
@@ -352,6 +345,7 @@ export default function QuoteForm() {
                   <p className="text-[11px] text-center text-slate-400">
                     Sua mensagem será encaminhada diretamente para a equipe oficial no WhatsApp e/ou e-mail.
                   </p>
+
                 </form>
               )}
 
@@ -359,6 +353,7 @@ export default function QuoteForm() {
           </div>
 
         </div>
+
       </div>
     </section>
   );
