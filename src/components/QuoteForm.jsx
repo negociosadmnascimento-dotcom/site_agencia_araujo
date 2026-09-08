@@ -49,17 +49,17 @@ export default function QuoteForm() {
 
     setIsSubmitting(true);
 
-    // Prepare formatted message for Agências Araújo
-    const formattedMessage = `*NOVA SOLICITAÇÃO DE ORÇAMENTO - AGÊNCIAS ARAÚJO*\n\n` +
-      `👤 *Nome:* ${formData.name}\n` +
-      `📱 *Telefone/WhatsApp:* ${formData.phone}\n` +
-      `📧 *E-mail:* ${formData.email || 'Não informado'}\n` +
-      `📸 *Serviço de Interesse:* ${formData.service}\n` +
-      `📅 *Data Prevista:* ${formData.date || 'A combinar'}\n\n` +
-      `💬 *Mensagem / Detalhes:*\n${formData.message}\n\n` +
-      `_Enviado através do site oficial Agências Araújo_`;
+    // Template 1: Resposta Rápida de Orçamento (aligned with WhatsApp module official templates)
+    const template1 = `Olá! Acabei de enviar uma solicitação de orçamento pelo site da Agências Araújo.\n\n` +
+      `*Nome:* ${formData.name}\n` +
+      `*Serviço:* ${formData.service}\n` +
+      `*Telefone:* ${formData.phone}\n` +
+      `*E-mail:* ${formData.email || 'Não informado'}\n` +
+      `*Data Prevista:* ${formData.date || 'A combinar'}\n\n` +
+      `*Detalhes:* ${formData.message}\n\n` +
+      `_Aguardo o retorno para produzir registros extraordinários!_`;
 
-    const whatsappUrl = `https://wa.me/${CONTACT_INFO.whatsapp.number}?text=${encodeURIComponent(formattedMessage)}`;
+    const whatsappUrl = `https://wa.me/${CONTACT_INFO.whatsapp.number}?text=${encodeURIComponent(template1)}`;
 
     setTimeout(() => {
       setIsSubmitting(false);
