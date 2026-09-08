@@ -4,7 +4,6 @@ import {
   Clock, AlertTriangle, CheckCircle, Database, Eye, Lock, ArrowDownRight, Sparkles 
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
-import { SUPABASE_PROJECT_ID } from '../../../lib/supabase';
 
 export default function HistoryModule() {
   const { user, isSuperAdmin, auditLogs } = useAuth();
@@ -79,9 +78,9 @@ export default function HistoryModule() {
             </div>
 
             <div className="p-4 rounded-2xl bg-slate-900/80 border border-white/10">
-              <span className="text-xs font-semibold text-slate-400 uppercase">Banco Supabase</span>
-              <p className="text-base font-mono font-bold text-slate-200 mt-2 truncate">{SUPABASE_PROJECT_ID}</p>
-              <span className="text-[10px] text-gold-300 font-medium">Políticas RLS sincronizadas</span>
+              <span className="text-xs font-semibold text-slate-400 uppercase">Integridade de Dados</span>
+              <p className="text-2xl font-serif font-bold text-white mt-1">100% Protegido</p>
+              <span className="text-[10px] text-emerald-400 font-medium">Registros operacionais seguros</span>
             </div>
           </div>
 

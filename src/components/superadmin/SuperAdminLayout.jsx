@@ -345,7 +345,7 @@ export default function SuperAdminLayout({ onBackToSite }) {
               className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-white flex items-center gap-1.5 transition-colors"
             >
               <Eye className="w-3.5 h-3.5 text-indigo-400" />
-              <span className="hidden sm:inline">Ver Site</span>
+              <span className="hidden sm:inline">Visitar Site</span>
             </button>
           </div>
         </header>
@@ -488,12 +488,29 @@ export default function SuperAdminLayout({ onBackToSite }) {
                             </span>
                           </td>
                           <td className="py-3.5 px-4 text-right">
-                            <button
-                              onClick={() => handleToggleTenantStatus(tenant.id)}
-                              className="text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 underline"
-                            >
-                              {tenant.status === 'Ativo' ? 'Desativar' : 'Ativar'}
-                            </button>
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => {
+                                  if (tenant.id === 'tenant_001') {
+                                    onBackToSite();
+                                  } else {
+                                    window.open(`https://${tenant.domain}`, '_blank');
+                                  }
+                                }}
+                                className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 hover:underline"
+                                title={`Visitar site do cliente ${tenant.name}`}
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                <span>Visitar Site</span>
+                              </button>
+                              <span className="text-slate-600">•</span>
+                              <button
+                                onClick={() => handleToggleTenantStatus(tenant.id)}
+                                className="text-[11px] font-semibold text-slate-400 hover:text-white underline"
+                              >
+                                {tenant.status === 'Ativo' ? 'Desativar' : 'Ativar'}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -556,12 +573,27 @@ export default function SuperAdminLayout({ onBackToSite }) {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs pt-2 border-t border-indigo-900/20">
-                      <span className="text-slate-400">Admin: <code className="text-slate-300">{tenant.adminEmail}</code></span>
-                      <div className="flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs pt-3 border-t border-indigo-900/30">
+                      <span className="text-slate-400 truncate">Admin: <code className="text-slate-300 font-mono">{tenant.adminEmail}</code></span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          onClick={() => {
+                            if (tenant.id === 'tenant_001') {
+                              onBackToSite();
+                            } else {
+                              window.open(`https://${tenant.domain}`, '_blank');
+                            }
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 hover:text-white border border-indigo-500/40 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm"
+                          title={`Visitar site do cliente ${tenant.name}`}
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>Visitar Site</span>
+                        </button>
+
                         <button
                           onClick={() => handleToggleTenantStatus(tenant.id)}
-                          className={`px-3 py-1 rounded-lg text-xs font-semibold ${
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                             tenant.status === 'Ativo'
                               ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30'
                               : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/30'

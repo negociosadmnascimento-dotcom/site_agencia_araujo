@@ -241,7 +241,7 @@ export default function AdminLayout({ onBackToSite }) {
             className="w-full py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-slate-300 hover:text-white flex items-center justify-center gap-2 transition-colors border border-white/5"
           >
             <ExternalLink className="w-3.5 h-3.5 text-gold" />
-            <span>Ver Site Oficial da Agência</span>
+            <span>Visitar Site</span>
           </button>
         </div>
       </aside>
@@ -280,7 +280,7 @@ export default function AdminLayout({ onBackToSite }) {
               className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-white flex items-center gap-1.5 transition-colors"
             >
               <ExternalLink className="w-3.5 h-3.5 text-gold" />
-              <span className="hidden sm:inline">Ver Site Oficial</span>
+              <span className="hidden sm:inline">Visitar Site</span>
             </button>
           </div>
         </header>
