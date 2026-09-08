@@ -1,7 +1,8 @@
-﻿import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   UserCheck, Plus, MessageCircle, ArrowRight,
-  X, Check, Trash2, Phone, Mail, DollarSign, FileText, RefreshCw, Loader2
+  X, Check, Trash2, Phone, Mail, DollarSign, FileText, RefreshCw, Loader2,
+  Archive, RotateCcw
 } from "lucide-react";
 import WhatsAppIcon from '../../../components/icons/WhatsAppIcon';
 import { useAuth } from "../../../context/AuthContext";
@@ -52,56 +53,8 @@ export default function LeadsModule() {
   };
 
   // ── Carregar leads com sincronização híbrida (Supabase + Site Submissions) ──
-  const SEED_LEADS = [
-    {
-      id: "lead_01",
-      name: "Camila Mendonça",
-      service: "Retratos Pessoais & Branding",
-      phone: "(21) 99123-4567",
-      email: "camila.mendonca@gmail.com",
-      source: "Formulário do Site",
-      estimatedValue: "R$ 2.800,00",
-      stage: "novo",
-      date: "Hoje, 14:20",
-      notes: "Solicitou ensaio ao ar livre na Urca ou Copacabana."
-    },
-    {
-      id: "lead_02",
-      name: "Diretoria Hospital Copa D'Or",
-      service: "Fotos Corporativas Equipe Médica",
-      phone: "(21) 98877-1122",
-      email: "rh@copador.com.br",
-      source: "WhatsApp Direto",
-      estimatedValue: "R$ 7.500,00",
-      stage: "contato",
-      date: "Hoje, 11:15",
-      notes: "Precisam de fotos de 15 médicos especialistas para o anuário."
-    },
-    {
-      id: "lead_03",
-      name: "Restaurante Fogo & Brasa Barra",
-      service: "Gastronomia & Vídeo Reels",
-      phone: "(21) 97766-3344",
-      email: "gerencia@fogoebasa.com",
-      source: "Instagram",
-      estimatedValue: "R$ 3.900,00",
-      stage: "proposta",
-      date: "Ontem",
-      notes: "Proposta enviada por WhatsApp. Aguardando aprovação do sócio."
-    },
-    {
-      id: "lead_04",
-      name: "Beatriz & Guilherme",
-      service: "Casamento & Pré-Wedding",
-      phone: "(21) 98122-3344",
-      email: "bia.guilherme@gmail.com",
-      source: "Indicação",
-      estimatedValue: "R$ 9.800,00",
-      stage: "fechado",
-      date: "Há 2 dias",
-      notes: "Sinal de 50% pago via Pix. Contrato assinado."
-    }
-  ];
+  // Sem dados de demonstração — ambiente pronto para testes reais
+  const SEED_LEADS = [];
 
   const loadLeads = useCallback(async () => {
     setLoading(true);
@@ -181,6 +134,49 @@ export default function LeadsModule() {
     const order = ["novo", "contato", "proposta", "fechado"];
     const idx = order.indexOf(current);
     return idx !== -1 && idx < order.length - 1 ? order[idx + 1] : null;
+  };
+
+  // ── Arquivar / Reativar lead ──────────────────────────────────────────────
+  const archiveLead = async (leadId) => {
+    setLeads((prev) => {
+      const updated = prev.map((l) => (l.id === leadId ? { ...l, stage: "perdido" } : l));
+      try {
+        localStorage.setItem("admin_leads", JSON.stringify(updated));
+      } catch (_) {}
+      return updated;
+    });
+
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from("leads").update({ etapa: "perdido" }).eq("id", leadId);
+      } catch (err) {
+        console.warn("Erro ao arquivar no Supabase:", err);
+      }
+    }
+
+    logActivity?.("ARCHIVE_LEAD", "leads", `Lead ${leadId} movido para Arquivado`);
+    showToast("Lead movido para a etapa 5. Arquivado!", "info");
+  };
+
+  const restoreLead = async (leadId) => {
+    setLeads((prev) => {
+      const updated = prev.map((l) => (l.id === leadId ? { ...l, stage: "novo" } : l));
+      try {
+        localStorage.setItem("admin_leads", JSON.stringify(updated));
+      } catch (_) {}
+      return updated;
+    });
+
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from("leads").update({ etapa: "novo" }).eq("id", leadId);
+      } catch (err) {
+        console.warn("Erro ao reativar no Supabase:", err);
+      }
+    }
+
+    logActivity?.("RESTORE_LEAD", "leads", `Lead ${leadId} reativado para Novo Lead`);
+    showToast("Lead reativado e retornado para 1. Novo Lead!", "success");
   };
 
   // ── Avançar etapa ──────────────────────────────────────────────────────────
@@ -378,7 +374,7 @@ export default function LeadsModule() {
                         </div>
 
                         {/* Card Action Buttons */}
-                        <div className="pt-1 flex items-center justify-between gap-2">
+                        <div className="pt-1 flex items-center justify-between gap-1.5">
                           {lead.phone && (
                             <a
                               href={`https://wa.me/55${lead.phone.replace(/\D/g, "")}?text=Olá%20${encodeURIComponent(lead.name)},%20sou%20da%20Agências%20Araújo!`}
@@ -390,14 +386,46 @@ export default function LeadsModule() {
                               <WhatsAppIcon className="w-3.5 h-3.5 text-green-400" />
                             </a>
                           )}
-                          {nextStage && (
-                            <button
-                              onClick={() => moveStage(lead.id, nextStage)}
-                              className="inline-flex items-center gap-1 text-[11px] font-bold text-gold hover:text-gold-light bg-gold/10 hover:bg-gold/20 px-2 py-1 rounded-lg transition-colors ml-auto"
-                            >
-                              <span>Avançar</span>
-                              <ArrowRight className="w-3 h-3" />
-                            </button>
+
+                          {lead.stage !== "perdido" ? (
+                            <>
+                              <button
+                                onClick={() => archiveLead(lead.id)}
+                                className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-400 hover:text-slate-200 bg-slate-800/80 hover:bg-slate-700/80 px-2 py-1 rounded-lg transition-colors"
+                                title="Mover este lead para 5. Arquivado"
+                              >
+                                <Archive className="w-3 h-3 text-slate-400" />
+                                <span>Arquivar</span>
+                              </button>
+
+                              {nextStage && (
+                                <button
+                                  onClick={() => moveStage(lead.id, nextStage)}
+                                  className="inline-flex items-center gap-1 text-[11px] font-bold text-gold hover:text-gold-light bg-gold/10 hover:bg-gold/20 px-2 py-1 rounded-lg transition-colors ml-auto"
+                                >
+                                  <span>Avançar</span>
+                                  <ArrowRight className="w-3 h-3" />
+                                </button>
+                              )}
+                            </>
+                          ) : (
+                            <div className="flex items-center gap-1.5 ml-auto">
+                              <button
+                                onClick={() => restoreLead(lead.id)}
+                                className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 px-2 py-1 rounded-lg transition-colors"
+                                title="Reativar e mover de volta para 1. Novo Lead"
+                              >
+                                <RotateCcw className="w-3 h-3" />
+                                <span>Reativar</span>
+                              </button>
+                              <button
+                                onClick={() => deleteLead(lead.id, lead.name)}
+                                className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+                                title="Excluir permanentemente"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -514,6 +542,7 @@ export default function LeadsModule() {
                     <option value="contato">2. Em Atendimento</option>
                     <option value="proposta">3. Proposta Enviada</option>
                     <option value="fechado">4. Fechado / Ganho</option>
+                    <option value="perdido">5. Arquivado</option>
                   </select>
                 </div>
               </div>

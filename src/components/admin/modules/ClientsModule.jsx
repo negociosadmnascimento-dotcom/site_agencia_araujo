@@ -11,6 +11,7 @@ export default function ClientsModule() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [toast, setToast] = useState(null);
 
   const showToast = (msg) => {
@@ -18,72 +19,7 @@ export default function ClientsModule() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const [clients, setClients] = useState([
-    {
-      id: 'cli_01',
-      name: 'Dr. Roberto Silveira',
-      role: 'Médico Cirurgião Plástico',
-      category: 'Corporativo & Retratos',
-      email: 'roberto.silveira@clinica.med.br',
-      phone: '(21) 99888-7766',
-      totalSpent: 'R$ 8.500,00',
-      sessionsCount: 3,
-      status: 'VIP',
-      lastSession: '12/01/2026',
-      notes: 'Prefere ensaios no consultório da Barra e luz suave.'
-    },
-    {
-      name: 'Mariana & Lucas Alencar',
-      role: 'Casal • Pré-Wedding & Cerimônia',
-      category: 'Eventos & Social',
-      email: 'mariana.alencar@gmail.com',
-      phone: '(21) 98765-4321',
-      totalSpent: 'R$ 12.400,00',
-      sessionsCount: 2,
-      status: 'Ativo',
-      lastSession: '02/02/2026',
-      notes: 'Pacote completo foto + filme 4k com drone no Arpoador.'
-    },
-    {
-      id: 'cli_03',
-      name: 'Le Vin Bistrô & Bar',
-      role: 'Carlos Drummond • Gerente Geral',
-      category: 'Gastronomia',
-      email: 'contato@levinbistro.com.br',
-      phone: '(21) 97654-3210',
-      totalSpent: 'R$ 6.200,00',
-      sessionsCount: 4,
-      status: 'Recorrente',
-      lastSession: '18/02/2026',
-      notes: 'Contrato trimestral de fotos de pratos sazonais e coquetelaria.'
-    },
-    {
-      id: 'cli_04',
-      name: 'Camila Mendonça Ferreira',
-      role: 'Arquiteta de Interiores',
-      category: 'Retratos Pessoais',
-      email: 'camila@mendoncaarq.com.br',
-      phone: '(21) 99123-4567',
-      totalSpent: 'R$ 3.800,00',
-      sessionsCount: 1,
-      status: 'Ativo',
-      lastSession: '28/01/2026',
-      notes: 'Ensaio de branding pessoal para nova revista de design.'
-    },
-    {
-      id: 'cli_05',
-      name: 'SAFRA Produções Rio',
-      role: 'Eduardo Neves • Diretor de Eventos',
-      category: 'Corporativo & Retratos',
-      email: 'eduardo@safraeventos.com.br',
-      phone: '(21) 98877-6655',
-      totalSpent: 'R$ 17.500,00',
-      sessionsCount: 5,
-      status: 'VIP',
-      lastSession: '15/02/2026',
-      notes: 'Parceiro corporativo chave para congressos no Windsor Barra.'
-    },
-  ]);
+  const [clients, setClients] = useState([]);
 
   const [newClient, setNewClient] = useState({
     name: '',

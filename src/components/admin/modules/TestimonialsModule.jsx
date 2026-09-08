@@ -9,52 +9,7 @@ export default function TestimonialsModule() {
   const { isSuperAdmin, logActivity } = useAuth();
   const [showAddModal, setShowAddModal] = useState(false);
 
-  const [testimonials, setTestimonials] = useState([
-    {
-      id: 'dep_01',
-      name: 'Dr. Roberto Silveira',
-      role: 'Médico Cirurgião Plástico',
-      event: 'Retratos Corporativos Executive',
-      rating: 5,
-      text: 'A experiência com a equipe da Agências Araújo superou todas as expectativas. A condução da iluminação e o posicionamento de marca elevaram a percepção do meu consultório a outro nível.',
-      approved: true,
-      featured: true,
-      date: '15/02/2026',
-    },
-    {
-      id: 'dep_02',
-      name: 'Mariana Alencar',
-      role: 'Noiva',
-      event: 'Ensaio Pré-Wedding no Arpoador',
-      rating: 5,
-      text: 'As fotos do pôr do sol no Rio ficaram cinematográficas! O cuidado aos detalhes e o profissionalismo de toda a equipe foram impecáveis. Recomendo de olhos fechados.',
-      approved: true,
-      featured: true,
-      date: '05/02/2026',
-    },
-    {
-      id: 'dep_03',
-      name: 'Carlos Drummond',
-      role: 'Gerente Geral • Le Vin Bistrô',
-      event: 'Fotografia Gastronômica & Drinks',
-      rating: 5,
-      text: 'Aumentamos nossa taxa de engajamento no Instagram em mais de 40% após postar as novas fotos dos pratos feitas pela Araújo. Qualidade ímpar no RJ.',
-      approved: true,
-      featured: false,
-      date: '20/01/2026',
-    },
-    {
-      id: 'dep_04',
-      name: 'Eduardo Neves',
-      role: 'Diretor de Eventos • SAFRA Rio',
-      event: 'Cobertura em Grande Escala Maracanã',
-      rating: 5,
-      text: 'Trabalho de alto padrão e agilidade na entrega de teasers durante o evento. Parceria que se consolidou com excelência.',
-      approved: false,
-      featured: false,
-      date: '28/02/2026',
-    },
-  ]);
+  const [testimonials, setTestimonials] = useState([]);
 
   const [newTestimonial, setNewTestimonial] = useState({
     name: '',

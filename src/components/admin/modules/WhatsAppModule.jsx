@@ -66,14 +66,14 @@ export default function WhatsAppModule() {
           </div>
           <h1 className="text-2xl font-serif font-bold text-white">Central de Atendimento WhatsApp</h1>
           <p className="text-slate-400 text-xs">
-            Templates pré-definidos de alto padrão e automações de contato para o número (21) 98132-4411
+            Templates pré-definidos de alto padrão e automações de contato para o número (21) 97429-9780
           </p>
         </div>
 
         {/* WhatsApp Official Status */}
         <div className="flex items-center gap-3 px-4 py-2 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-xs text-emerald-300 font-mono">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span>(21) 98132-4411 • Conectado</span>
+          <span>(21) 97429-9780 • Conectado</span>
         </div>
       </div>
 

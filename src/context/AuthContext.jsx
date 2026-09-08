@@ -23,8 +23,8 @@ export const DEFAULT_TENANT_SETTINGS = {
   logo: '/images/logo-butterfly-white.png',
   tagline: 'A Excelência Visual que sua História Merece',
   primaryColor: '#D4AF37', // Gold
-  phone: '(21) 98132-4411',
-  whatsapp: '5521981324411',
+  phone: '(21) 97429-9780',
+  whatsapp: '5521974299780',
   instagram: '@agenciasaraujo',
   domain: 'agenciasaraujo.com.br',
 };

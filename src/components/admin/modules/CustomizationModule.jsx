@@ -5,6 +5,7 @@ import { useAuth, DEFAULT_TENANT_SETTINGS } from '../../../context/AuthContext';
 export default function CustomizationModule() {
   const { logActivity } = useAuth();
   const [saved, setSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [settings, setSettings] = useState(() => {
     try {
@@ -39,10 +40,14 @@ export default function CustomizationModule() {
 
   const handleSave = (e) => {
     e.preventDefault();
-    localStorage.setItem('tenant_custom_settings', JSON.stringify(settings));
-    setSaved(true);
-    logActivity('PERSONALIZACAO_TENANT', 'customization', 'Identidade visual da Agência Araújo atualizada');
-    setTimeout(() => setSaved(false), 3000);
+    setIsSaving(true);
+    setTimeout(() => {
+      localStorage.setItem('tenant_custom_settings', JSON.stringify(settings));
+      setIsSaving(false);
+      setSaved(true);
+      logActivity('PERSONALIZACAO_TENANT', 'customization', 'Identidade visual da Agência Araújo atualizada');
+      setTimeout(() => setSaved(false), 3500);
+    }, 900);
   };
 
   const colorPresets = [
@@ -273,10 +278,25 @@ export default function CustomizationModule() {
 
           <button
             type="submit"
-            className="w-full py-3.5 px-6 rounded-xl bg-gold-gradient text-dark-950 font-bold text-xs uppercase tracking-wider hover:brightness-110 shadow-lg shadow-gold/20 flex items-center justify-center gap-2 transition-all"
+            disabled={isSaving}
+            className="w-full py-3.5 px-6 rounded-xl bg-gold-gradient text-dark-950 font-bold text-xs uppercase tracking-wider hover:brightness-110 shadow-lg shadow-gold/20 flex items-center justify-center gap-2 transition-all disabled:opacity-75 disabled:cursor-not-allowed"
           >
-            <Check className="w-4 h-4" />
-            <span>Salvar Personalização da Agência Araújo</span>
+            {isSaving ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin text-dark-950" />
+                <span>Salvando Personalização...</span>
+              </>
+            ) : saved ? (
+              <>
+                <Check className="w-4 h-4 text-emerald-950" />
+                <span>✓ Personalização Salva com Sucesso!</span>
+              </>
+            ) : (
+              <>
+                <Check className="w-4 h-4" />
+                <span>Salvar Personalização da Agência Araújo</span>
+              </>
+            )}
           </button>
         </div>
 

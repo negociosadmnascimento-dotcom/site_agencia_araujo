@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Globe, Users, UserCheck, Calendar, FileText, 
   History, MessageSquareQuote, Image, Inbox, MessageCircle, 
@@ -27,6 +27,28 @@ export default function AdminLayout({ onBackToSite }) {
   const { user, logout } = useAuth();
   const [activeModule, setActiveModule] = useState('Dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [counts, setCounts] = useState({ leads: 0, sessions: 0, forms: 0 });
+
+  useEffect(() => {
+    const updateCounts = () => {
+      try {
+        const leads = JSON.parse(localStorage.getItem('admin_leads') || '[]');
+        const siteLeads = JSON.parse(localStorage.getItem('site_form_submissions') || '[]');
+        const sessions = JSON.parse(localStorage.getItem('admin_sessions') || '[]');
+        const readIds = JSON.parse(localStorage.getItem('admin_forms_read_ids') || '[]');
+        const confirmed = sessions.filter(s => (s.status || '').toLowerCase().includes('confirmado')).length;
+        const unreadForms = siteLeads.filter(s => !readIds.includes(s.id)).length;
+        setCounts({
+          leads: leads.length + siteLeads.length,
+          sessions: confirmed,
+          forms: unreadForms,
+        });
+      } catch (_) {}
+    };
+    updateCounts();
+    const interval = setInterval(updateCounts, 8000);
+    return () => clearInterval(interval);
+  }, []);
 
   // The 13 photography tenant modules + Customization
   const navigationGroups = [
@@ -40,12 +62,30 @@ export default function AdminLayout({ onBackToSite }) {
     {
       group: 'Comercial & Atendimento',
       items: [
-        { id: 'leads', label: 'Leads (Funil)', icon: UserCheck, badge: '43 leads', badgeColor: 'bg-gold/20 text-gold-300 border-gold/30' },
+        { 
+          id: 'leads', 
+          label: 'Leads (Funil)', 
+          icon: UserCheck, 
+          badge: counts.leads > 0 ? `${counts.leads} lead(s)` : null, 
+          badgeColor: 'bg-gold/20 text-gold-300 border-gold/30' 
+        },
         { id: 'clientes', label: 'Clientes', icon: Users },
-        { id: 'agenda', label: 'Agenda de Ensaios', icon: Calendar, badge: '3 confirmados', badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
+        { 
+          id: 'agenda', 
+          label: 'Agenda de Ensaios', 
+          icon: Calendar, 
+          badge: counts.sessions > 0 ? `${counts.sessions} confirmados` : null, 
+          badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' 
+        },
         { id: 'propostas', label: 'Propostas Comerciais', icon: FileText },
         { id: 'WhatsApp', label: 'WhatsApp', icon: MessageCircle, badge: 'Online', badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
-        { id: 'formulários', label: 'Formulários Recebidos', icon: Inbox },
+        { 
+          id: 'formulários', 
+          label: 'Formulários Recebidos', 
+          icon: Inbox,
+          badge: counts.forms > 0 ? `${counts.forms} novo(s)` : null,
+          badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+        },
       ]
     },
     {

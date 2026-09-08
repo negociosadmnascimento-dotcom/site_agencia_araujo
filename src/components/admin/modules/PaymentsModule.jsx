@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   DollarSign, Plus, Search, Filter, ShieldCheck, CheckCircle2, 
-  Clock, AlertCircle, Eye, EyeOff, Lock, ArrowUpRight, Download, X 
+  Clock, AlertCircle, Eye, EyeOff, Lock, ArrowUpRight, Download, X, RefreshCw
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 
@@ -11,63 +11,31 @@ export default function PaymentsModule() {
   const [filterStatus, setFilterStatus] = useState('Todos');
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const [payments, setPayments] = useState([
-    {
-      id: 'pay_01',
-      invoice: 'FAT-2026-104',
-      clientName: 'Dr. Roberto Silveira',
-      description: 'Sinal 50% • Retratos Corporativos Executive',
-      amount: 'R$ 1.900,00',
-      method: 'PIX Instantâneo',
-      status: 'Quitado',
-      dueDate: '01/03/2026',
-      paidAt: '01/03/2026 10:14',
-      statusColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-    },
-    {
-      id: 'pay_02',
-      invoice: 'FAT-2026-105',
-      clientName: 'Mariana & Lucas Alencar',
-      description: 'Primeira Parcela (1/3) • Casamento & Sunset Arpoador',
-      amount: 'R$ 4.133,00',
-      method: 'Cartão de Crédito 3x',
-      status: 'Quitado',
-      dueDate: '05/03/2026',
-      paidAt: '05/03/2026 16:30',
-      statusColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-    },
-    {
-      id: 'pay_03',
-      invoice: 'FAT-2026-106',
-      clientName: 'Le Vin Bistrô Gourmet',
-      description: 'Contrato Mensal Fotografia Gastronômica (Março)',
-      amount: 'R$ 3.200,00',
-      method: 'Boleto Bancário PJ',
-      status: 'Pendente',
-      dueDate: '15/03/2026',
-      paidAt: null,
-      statusColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-    },
-    {
-      id: 'pay_04',
-      invoice: 'FAT-2026-107',
-      clientName: 'Cobertura Especial Maracanã',
-      description: 'Entrada Cobertura VIP Lounge & 3 Câmeras',
-      amount: 'R$ 7.500,00',
-      method: 'PIX PJ',
-      status: 'Quitado',
-      dueDate: '28/02/2026',
-      paidAt: '28/02/2026 11:20',
-      statusColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-    },
-  ]);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const [payments, setPayments] = useState(() => {
+    try {
+      const stored = localStorage.getItem('admin_payments');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
 
   const [newPay, setNewPay] = useState({
     clientName: '',
     description: '',
     amount: '',
     method: 'PIX Instantâneo',
+    installments: '1',
+    contractId: '',
     dueDate: '',
   });
 
@@ -75,48 +43,82 @@ export default function PaymentsModule() {
     e.preventDefault();
     if (!newPay.clientName || !newPay.amount) return;
 
-    const inv = `FAT-2026-${Math.floor(110 + Math.random() * 890)}`;
+    setIsSaving(true);
+    const now = new Date();
+    const year = now.getFullYear();
+    const seq = Math.floor(100 + Math.random() * 900);
+    // Universal ID: links payment to contract
+    const universalId = newPay.contractId || `ID-${year}-${seq}-${newPay.clientName.replace(/\s+/g,'').slice(0,4).toUpperCase()}`;
+    const inv = `FAT-${year}-${seq}`;
+    const methodLabel = newPay.method === 'Cartão de Crédito'
+      ? (newPay.installments === '1' ? 'Cartão de Crédito à Vista' : `Cartão de Crédito ${newPay.installments}x`)
+      : newPay.method;
+
     const created = {
       id: `pay_${Date.now()}`,
       invoice: inv,
+      universalId,
       clientName: newPay.clientName,
       description: newPay.description || 'Ensaio Fotográfico',
       amount: newPay.amount.startsWith('R$') ? newPay.amount : `R$ ${newPay.amount}`,
-      method: newPay.method,
+      method: methodLabel,
+      installments: newPay.method === 'Cartão de Crédito' ? newPay.installments : null,
       status: 'Pendente',
-      dueDate: newPay.dueDate || '30/03/2026',
+      dueDate: newPay.dueDate || new Date(now.getTime() + 7*86400000).toLocaleDateString('pt-BR'),
       paidAt: null,
       statusColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
     };
 
-    setPayments([created, ...payments]);
-    logActivity('NOVO_LANCAMENTO_FINANCEIRO', 'pagamentos', `Registrou fatura ${inv} (${created.amount}) para ${created.clientName}`);
-    setShowAddModal(false);
+    setTimeout(() => {
+      setPayments(prev => {
+        const next = [created, ...prev];
+        try { localStorage.setItem('admin_payments', JSON.stringify(next)); } catch (_) {}
+        return next;
+      });
+      logActivity('NOVO_LANCAMENTO_FINANCEIRO', 'pagamentos', `Registrou fatura ${inv} [${universalId}] (${created.amount}) para ${created.clientName}`);
+      setIsSaving(false);
+      setNewPay({ clientName: '', description: '', amount: '', method: 'PIX Instantâneo', installments: '1', contractId: '', dueDate: '' });
+      setShowAddModal(false);
+      showToast(`Fatura ${inv} com ID Universal "${universalId}" registrada!`);
+    }, 700);
   };
 
   const markAsPaid = (id) => {
-    setPayments(payments.map(p => {
-      if (p.id === id) {
-        logActivity('BAIXA_PAGAMENTO', 'pagamentos', `Confirmou recebimento da fatura ${p.invoice} de ${p.clientName}`);
-        return { 
-          ...p, 
-          status: 'Quitado', 
-          paidAt: 'Agora mesmo', 
-          statusColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' 
-        };
-      }
-      return p;
-    }));
+    setPayments(prev => {
+      const next = prev.map(p => {
+        if (p.id === id) {
+          logActivity('BAIXA_PAGAMENTO', 'pagamentos', `Confirmou recebimento da fatura ${p.invoice} de ${p.clientName}`);
+          return { 
+            ...p, 
+            status: 'Quitado', 
+            paidAt: 'Agora mesmo', 
+            statusColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' 
+          };
+        }
+        return p;
+      });
+      try { localStorage.setItem('admin_payments', JSON.stringify(next)); } catch (_) {}
+      return next;
+    });
+    showToast("Pagamento quitado com sucesso!");
   };
 
   const filtered = payments.filter((p) => {
-    const matchesSearch = p.clientName.toLowerCase().includes(searchTerm.toLowerCase()) || p.invoice.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = p.clientName.toLowerCase().includes(searchTerm.toLowerCase()) || p.invoice.toLowerCase().includes(searchTerm.toLowerCase()) || (p.universalId || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'Todos' || p.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
 
   return (
     <div className="space-y-8">
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed top-6 right-6 z-[999] px-5 py-3 rounded-2xl text-sm font-semibold shadow-2xl bg-emerald-600 text-white flex items-center gap-2 animate-fade-in">
+          <CheckCircle2 className="w-4 h-4" />
+          {toast}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
@@ -200,10 +202,10 @@ export default function PaymentsModule() {
           <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Buscar por cliente ou código de fatura..."
+            placeholder="Buscar por cliente, fatura ou ID Universal (ex: CTR-2026-...)..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/80 border border-slate-800 text-white text-xs focus:border-gold focus:outline-none"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/80 border border-slate-800 text-white text-xs focus:border-gold focus:outline-none font-mono"
           />
         </div>
 
@@ -231,6 +233,7 @@ export default function PaymentsModule() {
             <thead className="bg-black/50 text-slate-400 uppercase text-[10px] tracking-wider border-b border-white/10">
               <tr>
                 <th className="py-4 px-6">Fatura & Cliente</th>
+                <th className="py-4 px-6">ID Universal</th>
                 <th className="py-4 px-6">Descrição do Serviço</th>
                 <th className="py-4 px-6">Método</th>
                 <th className="py-4 px-6">Vencimento</th>
@@ -247,6 +250,9 @@ export default function PaymentsModule() {
                       <span className="font-mono text-gold-300 text-xs font-bold block">{pay.invoice}</span>
                       <span className="font-bold text-white text-xs mt-0.5 block">{pay.clientName}</span>
                     </div>
+                  </td>
+                  <td className="py-4 px-6">
+                    <span className="font-mono text-[10px] text-slate-400 bg-white/5 px-2 py-0.5 rounded">{pay.universalId || '—'}</span>
                   </td>
                   <td className="py-4 px-6 text-slate-300 max-w-xs">
                     <span className="truncate block">{pay.description}</span>
@@ -343,7 +349,7 @@ export default function PaymentsModule() {
                   <label className="block text-xs font-semibold text-slate-300 mb-1">Forma de Pagamento</label>
                   <select
                     value={newPay.method}
-                    onChange={(e) => setNewPay({ ...newPay, method: e.target.value })}
+                    onChange={(e) => setNewPay({ ...newPay, method: e.target.value, installments: '1' })}
                     className="w-full px-4 py-2.5 rounded-xl bg-black/50 border border-slate-700 text-white text-sm focus:border-gold focus:outline-none"
                   >
                     <option>PIX Instantâneo</option>
@@ -352,6 +358,46 @@ export default function PaymentsModule() {
                     <option>Boleto Bancário</option>
                   </select>
                 </div>
+              </div>
+
+              {/* Installments — only for Cartão de Crédito */}
+              {newPay.method === 'Cartão de Crédito' && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Parcelamento</label>
+                  <select
+                    value={newPay.installments}
+                    onChange={(e) => setNewPay({ ...newPay, installments: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl bg-black/50 border border-emerald-500/40 text-white text-sm focus:border-gold focus:outline-none"
+                  >
+                    <option value="1">1x — À Vista (sem juros)</option>
+                    <option value="2">2x — sem juros</option>
+                    <option value="3">3x — sem juros</option>
+                    <option value="4">4x — sem juros</option>
+                    <option value="5">5x — sem juros</option>
+                    <option value="6">6x — sem juros</option>
+                    <option value="7">7x — com juros</option>
+                    <option value="8">8x — com juros</option>
+                    <option value="9">9x — com juros</option>
+                    <option value="10">10x — com juros</option>
+                    <option value="11">11x — com juros</option>
+                    <option value="12">12x — com juros</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Universal ID — links to contract */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  ID do Contrato Vinculado <span className="text-slate-500 font-normal">(opcional — gerado automaticamente se vazio)</span>
+                </label>
+                <input
+                  type="text"
+                  value={newPay.contractId}
+                  onChange={(e) => setNewPay({ ...newPay, contractId: e.target.value })}
+                  placeholder="Ex: CTR-2026-041 ou ID-2026-123-SILV"
+                  className="w-full px-4 py-2.5 rounded-xl bg-black/50 border border-slate-700 text-white text-xs focus:border-gold focus:outline-none font-mono"
+                />
+                <p className="text-[10px] text-slate-500 mt-1">Mesmo ID para buscar contrato e pendência de pagamento</p>
               </div>
 
               <div className="pt-2 flex items-center justify-end gap-3">
@@ -364,9 +410,17 @@ export default function PaymentsModule() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-gold-gradient text-dark-950 font-bold text-xs uppercase tracking-wider hover:brightness-110 shadow-lg shadow-gold/20"
+                  disabled={isSaving}
+                  className="px-5 py-2.5 rounded-xl bg-gold-gradient text-dark-950 font-bold text-xs uppercase tracking-wider hover:brightness-110 shadow-lg shadow-gold/20 flex items-center gap-2 disabled:opacity-70"
                 >
-                  Registrar Fatura
+                  {isSaving ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Registrando...</span>
+                    </>
+                  ) : (
+                    <span>Registrar Fatura</span>
+                  )}
                 </button>
               </div>
             </form>

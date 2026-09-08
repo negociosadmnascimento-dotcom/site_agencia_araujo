@@ -10,32 +10,7 @@ const STORAGE_KEY = 'site_form_submissions';
 const READ_KEY = 'admin_forms_read_ids';
 const DELETED_KEY = 'admin_forms_deleted_ids';
 
-const SAMPLE_SUBMISSIONS = [
-  {
-    id: 'sample_01',
-    name: 'Camila Mendonça Ferreira',
-    email: 'camila.mendonca@gmail.com',
-    phone: '(21) 99123-4567',
-    service: 'Retratos Pessoais & Posicionamento',
-    eventDate: '28/03/2026',
-    message: 'Olá! Sou arquiteta e gostaria de renovar meus retratos profissionais para publicação em revista especializada.',
-    createdAt: 'Ontem, 14:15',
-    read: false,
-    source: 'Formulário do Site',
-  },
-  {
-    id: 'sample_02',
-    name: 'Chef Rodrigo Guimarães',
-    email: 'rodrigo@bistrocarioca.com.br',
-    phone: '(21) 97766-5544',
-    service: 'Gastronomia & Marcas',
-    eventDate: '02/04/2026',
-    message: 'Solicito orçamento para ensaio do novo menu degustação de inverno, incluindo fotos estilizadas de pratos e drinks autorais.',
-    createdAt: '03/03/2026',
-    read: true,
-    source: 'Formulário do Site',
-  },
-];
+const SAMPLE_SUBMISSIONS = [];
 
 export default function FormsInboxModule({ onNavigate }) {
   const { logActivity } = useAuth();

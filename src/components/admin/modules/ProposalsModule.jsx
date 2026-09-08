@@ -12,65 +12,9 @@ export default function ProposalsModule() {
   const [filterStatus, setFilterStatus] = useState('Todos');
   const [copiedId, setCopiedId] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const [proposals, setProposals] = useState([
-    {
-      id: 'prop_01',
-      code: 'PROP-2026-081',
-      clientName: 'Dr. Roberto Silveira',
-      phone: '(21) 99888-7766',
-      service: 'Retratos Corporativos Executive',
-      packageName: 'Master Prime (20 Fotos Tratadas + Ensaio Studio)',
-      amount: 'R$ 3.800,00',
-      validUntil: '15/03/2026',
-      status: 'Aceita',
-      token: 'sec_8192a9b3c4d5',
-      statusColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-      createdDate: '01/03/2026'
-    },
-    {
-      id: 'prop_02',
-      code: 'PROP-2026-082',
-      clientName: 'Mariana & Lucas Alencar',
-      phone: '(21) 98765-4321',
-      service: 'Cobertura Casamento & Pré-Wedding',
-      packageName: 'Diamond Audiovisual (Fotos + Filme 4K + Drone)',
-      amount: 'R$ 12.400,00',
-      validUntil: '20/03/2026',
-      status: 'Em Análise',
-      token: 'sec_4412f8e1b7c9',
-      statusColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-      createdDate: '03/03/2026'
-    },
-    {
-      id: 'prop_03',
-      code: 'PROP-2026-083',
-      clientName: 'Le Vin Bistrô Gourmet',
-      phone: '(21) 97654-3210',
-      service: 'Fotografia Gastronômica & Coquetelaria',
-      packageName: 'Menu Completo Outono (40 Itens + Reels)',
-      amount: 'R$ 4.600,00',
-      validUntil: '18/03/2026',
-      status: 'Enviada',
-      token: 'sec_1109a3b8c2d1',
-      statusColor: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-      createdDate: '04/03/2026'
-    },
-    {
-      id: 'prop_04',
-      code: 'PROP-2026-084',
-      clientName: 'Cobertura Especial Maracanã',
-      phone: '(21) 98132-4411',
-      service: 'Produção em Grande Escala / VIP Lounge',
-      packageName: 'Cobertura Full VIP (3 Câmeras + Teaser Instantâneo)',
-      amount: 'R$ 15.000,00',
-      validUntil: '12/03/2026',
-      status: 'Aceita',
-      token: 'sec_7734c2d9e8f0',
-      statusColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-      createdDate: '26/02/2026'
-    },
-  ]);
+  const [proposals, setProposals] = useState([]);
 
   const [newProp, setNewProp] = useState({
     clientName: '',
@@ -97,7 +41,7 @@ export default function ProposalsModule() {
       id: `prop_${Date.now()}`,
       code: propCode,
       clientName: newProp.clientName,
-      phone: newProp.phone || '(21) 98132-4411',
+      phone: newProp.phone || '(21) 97429-9780',
       service: newProp.service,
       packageName: newProp.packageName,
       amount: newProp.amount.startsWith('R$') ? newProp.amount : `R$ ${newProp.amount}`,
