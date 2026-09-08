@@ -3,11 +3,11 @@ import {
   LayoutDashboard, Globe, Users, UserCheck, Calendar, FileText, 
   History, MessageSquareQuote, Image, Inbox, MessageCircle, 
   CreditCard, FileCheck, LogOut, ExternalLink, Menu, 
-  X, ChevronRight, Sparkles, User, Palette, Eye
+  X, ChevronRight, Palette, Camera, CheckCircle2
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth, DEFAULT_TENANT_SETTINGS } from '../../context/AuthContext';
 
-// Module Components for the Admin
+// Module Components
 import DashboardModule from './modules/DashboardModule';
 import SiteModule from './modules/SiteModule';
 import ClientsModule from './modules/ClientsModule';
@@ -28,57 +28,46 @@ export default function AdminLayout({ onBackToSite }) {
   const [activeModule, setActiveModule] = useState('Dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // The modules of the Admin (Operational Agency)
+  // The 13 photography tenant modules + Customization
   const navigationGroups = [
     {
-      group: 'Visão Geral',
+      group: 'Visão Geral & Site',
       items: [
         { id: 'Dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { id: 'site', label: 'Site', icon: Globe },
+        { id: 'site', label: 'Meu Site', icon: Globe },
+        { id: 'servicos', label: 'Conteúdo & Serviços', icon: Camera },
       ]
     },
     {
-      group: 'Comercial & CRM',
+      group: 'Comercial & Atendimento',
       items: [
+        { id: 'leads', label: 'Leads (Funil)', icon: UserCheck, badge: '43 leads', badgeColor: 'bg-gold/20 text-gold-300 border-gold/30' },
         { id: 'clientes', label: 'Clientes', icon: Users },
-        { id: 'leads', label: 'Leads', icon: UserCheck },
-        { id: 'agenda', label: 'Agenda', icon: Calendar },
-        { id: 'propostas', label: 'Propostas', icon: FileText },
+        { id: 'agenda', label: 'Agenda de Ensaios', icon: Calendar, badge: '3 confirmados', badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
+        { id: 'propostas', label: 'Propostas Comerciais', icon: FileText },
+        { id: 'WhatsApp', label: 'WhatsApp', icon: MessageCircle, badge: 'Online', badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
+        { id: 'formulários', label: 'Formulários Recebidos', icon: Inbox },
       ]
     },
     {
-      group: 'Operacional & Conteúdo',
+      group: 'Portfólio & Prova Social',
       items: [
-        { id: 'histórico', label: 'Histórico Operacional', icon: History },
+        { id: 'portfólio', label: 'Portfólio & Fotos', icon: Image },
         { id: 'depoimentos', label: 'Depoimentos', icon: MessageSquareQuote },
-        { id: 'portfólio', label: 'Portfólio', icon: Image },
-        { 
-          id: 'formulários', 
-          label: 'Formulários', 
-          icon: Inbox, 
-          badge: '1 novo',
-          badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-500/30'
-        },
-        { 
-          id: 'WhatsApp', 
-          label: 'WhatsApp', 
-          icon: MessageCircle, 
-          badge: 'Online',
-          badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-        },
+        { id: 'histórico', label: 'Histórico de Ensaios', icon: History },
       ]
     },
     {
       group: 'Financeiro & Jurídico',
       items: [
-        { id: 'pagamentos', label: 'Pagamentos', icon: CreditCard },
-        { id: 'contratos', label: 'Contratos', icon: FileCheck },
+        { id: 'pagamentos', label: 'Pagamentos Recebidos', icon: CreditCard },
+        { id: 'contratos', label: 'Contratos de Ensaios', icon: FileCheck },
       ]
     },
     {
-      group: 'Identidade da Agência',
+      group: 'Configuração da Agência',
       items: [
-        { id: 'personalizacao', label: 'Personalização', icon: Palette },
+        { id: 'personalizar', label: 'Personalizar Agência', icon: Palette, badge: 'Identidade', badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30' },
       ]
     }
   ];
@@ -88,6 +77,7 @@ export default function AdminLayout({ onBackToSite }) {
       case 'Dashboard':
         return <DashboardModule onNavigate={(mod) => setActiveModule(mod)} />;
       case 'site':
+      case 'servicos':
         return <SiteModule />;
       case 'clientes':
         return <ClientsModule />;
@@ -111,7 +101,7 @@ export default function AdminLayout({ onBackToSite }) {
         return <PaymentsModule />;
       case 'contratos':
         return <ContractsModule />;
-      case 'personalizacao':
+      case 'personalizar':
         return <CustomizationModule />;
       default:
         return <DashboardModule onNavigate={(mod) => setActiveModule(mod)} />;
@@ -129,27 +119,27 @@ export default function AdminLayout({ onBackToSite }) {
         />
       )}
 
-      {/* SIDEBAR (100% OPERATIONAL - NO SUPER ADMIN CLUES, NO DATABASE PILLS) */}
+      {/* SIDEBAR TENANT ADMIN - 100% AGÊNCIA ARAÚJO BRANDING */}
       <aside className={`
         fixed lg:sticky top-0 left-0 h-screen w-72 bg-gradient-to-b from-slate-900 via-[#0A0E17] to-black 
         border-r border-gold/20 flex flex-col justify-between z-50 transition-transform duration-300 ease-in-out
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
-        {/* Top Branding */}
+        {/* Top Branding (Agência Araújo) */}
         <div className="p-6 pb-4 border-b border-white/5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <img
-                src="/images/logo-butterfly-white.png"
-                alt="Agências Araújo"
+                src={DEFAULT_TENANT_SETTINGS.logo}
+                alt={DEFAULT_TENANT_SETTINGS.name}
                 className="h-10 w-auto object-contain drop-shadow-[0_0_15px_rgba(212,175,55,0.4)]"
               />
-              <div>
-                <span className="text-sm font-display font-bold tracking-wider text-white block">
-                  AGÊNCIAS ARAÚJO
+              <div className="min-w-0">
+                <span className="text-sm font-serif font-bold tracking-wider text-white block truncate">
+                  AGÊNCIA ARAÚJO
                 </span>
-                <span className="text-[10px] font-mono uppercase tracking-widest text-gold-300">
-                  Painel da Agência
+                <span className="text-[10px] font-mono uppercase tracking-widest text-gold-300 block truncate">
+                  Tenant #001 • Fotografia
                 </span>
               </div>
             </div>
@@ -162,21 +152,21 @@ export default function AdminLayout({ onBackToSite }) {
             </button>
           </div>
 
-          {/* Simple Operator Badge without toggle */}
-          <div className="mt-4 p-2 rounded-xl bg-black/40 border border-white/10 flex items-center justify-between">
+          {/* Business Status Pill */}
+          <div className="mt-4 p-2.5 rounded-xl bg-black/50 border border-gold/20 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400" />
-              <span className="text-xs font-bold text-white uppercase font-mono">
-                Ambiente de Gestão Ativo
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-xs font-bold text-white font-serif">
+                Agência Ativa
               </span>
             </div>
-            <span className="text-[10px] font-mono text-slate-400 bg-white/5 px-2 py-0.5 rounded">
-              Operador
+            <span className="text-[10px] font-mono text-gold-300 bg-gold/10 px-2 py-0.5 rounded border border-gold/30">
+              Plano Pro
             </span>
           </div>
         </div>
 
-        {/* Navigation Items */}
+        {/* Navigation Items (The 13 Modules) */}
         <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6 scrollbar-thin scrollbar-thumb-white/10">
           {navigationGroups.map((group, gIdx) => (
             <div key={gIdx} className="space-y-1">
@@ -203,7 +193,7 @@ export default function AdminLayout({ onBackToSite }) {
                   >
                     <div className="flex items-center gap-3">
                       <Icon className={`w-4 h-4 ${isActive ? 'text-dark-950' : 'text-gold'}`} />
-                      <span className="capitalize">{item.label}</span>
+                      <span>{item.label}</span>
                     </div>
 
                     {item.badge && (
@@ -220,19 +210,19 @@ export default function AdminLayout({ onBackToSite }) {
           ))}
         </div>
 
-        {/* Bottom Sidebar: Profile & View Site */}
+        {/* Bottom Sidebar: Tenant Admin Profile & Official Site */}
         <div className="p-4 border-t border-white/5 space-y-3 bg-black/40">
           {/* User info */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between pt-1">
             <div className="flex items-center gap-2.5 min-w-0">
               <img
-                src={user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
+                src={user?.avatar || DEFAULT_TENANT_SETTINGS.logo}
                 alt={user?.name}
-                className="w-8 h-8 rounded-full object-cover border border-gold/40"
+                className="w-8 h-8 rounded-full object-cover border border-gold/40 bg-black/50"
               />
               <div className="min-w-0">
-                <span className="text-xs font-bold text-white block truncate">{user?.name || 'Operador'}</span>
-                <span className="text-[10px] text-slate-400 block truncate">{user?.email}</span>
+                <span className="text-xs font-bold text-white block truncate">{user?.name || 'Agência Araújo'}</span>
+                <span className="text-[10px] text-slate-400 block truncate">{user?.email || 'admin@agenciasaraujo.com.br'}</span>
               </div>
             </div>
 
@@ -251,7 +241,7 @@ export default function AdminLayout({ onBackToSite }) {
             className="w-full py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-slate-300 hover:text-white flex items-center justify-center gap-2 transition-colors border border-white/5"
           >
             <ExternalLink className="w-3.5 h-3.5 text-gold" />
-            <span>Ver Site Oficial</span>
+            <span>Ver Site Oficial da Agência</span>
           </button>
         </div>
       </aside>
@@ -270,7 +260,7 @@ export default function AdminLayout({ onBackToSite }) {
             </button>
 
             <div className="flex items-center gap-2 text-xs text-slate-400">
-              <span>Painel</span>
+              <span className="text-gold font-serif">Agência Araújo</span>
               <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
               <span className="text-white font-semibold capitalize">{activeModule}</span>
             </div>
@@ -278,11 +268,19 @@ export default function AdminLayout({ onBackToSite }) {
 
           <div className="flex items-center gap-3">
             <button
+              onClick={() => setActiveModule('personalizar')}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gold/10 hover:bg-gold/20 border border-gold/30 text-gold-300 text-xs font-semibold transition-colors"
+            >
+              <Palette className="w-3.5 h-3.5 text-gold" />
+              <span>Personalizar Marca</span>
+            </button>
+
+            <button
               onClick={onBackToSite}
               className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-white flex items-center gap-1.5 transition-colors"
             >
-              <Eye className="w-3.5 h-3.5 text-gold" />
-              <span className="hidden sm:inline">Ver Site</span>
+              <ExternalLink className="w-3.5 h-3.5 text-gold" />
+              <span className="hidden sm:inline">Ver Site Oficial</span>
             </button>
           </div>
         </header>

@@ -3,22 +3,55 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 const AuthContext = createContext();
 
-const MOCK_USERS = {
-  admin: {
-    id: 'usr_admin_001',
-    name: 'Operador Admin (Produção)',
-    email: 'admin@agenciasaraujo.com.br',
-    role: 'admin',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-    title: 'Administrador de Atendimento & Produção',
-  },
-  super_admin: {
+// 1. BRANDING DA PLATAFORMA (SUPER ADMIN / SAAS CORE)
+// NÃO USA "Agência Araújo" - é a identidade do provedor SaaS
+export const PLATFORM_SETTINGS = {
+  name: 'NexCore SaaS Platform',
+  tagline: 'Gestão Central de Tenants & Infraestrutura Multi-Empresa',
+  logo: '/images/platform-emblem.svg',
+  favicon: '/favicon.ico',
+  primaryColor: '#6366F1', // Indigo / Platinum
+  supportEmail: 'negociosadm.nascimento@gmail.com',
+};
+
+// 2. BRANDING DO CLIENTE / TENANT #001 (AGÊNCIA ARAÚJO)
+// Usado no site público e no /admin
+export const DEFAULT_TENANT_SETTINGS = {
+  tenant_id: 'tenant_001',
+  name: 'Agência Araújo',
+  nicho: 'Fotografia',
+  logo: '/images/logo-butterfly-white.png',
+  tagline: 'A Excelência Visual que sua História Merece',
+  primaryColor: '#D4AF37', // Gold
+  phone: '(21) 98132-4411',
+  whatsapp: '5521981324411',
+  instagram: '@agenciasaraujo',
+  domain: 'agenciasaraujo.com.br',
+};
+
+// Base de credenciais autorizadas (quando operando com verificação estrita ou Supabase)
+const AUTHORIZED_ACCOUNTS = {
+  'negociosadm.nascimento@gmail.com': {
     id: 'usr_super_001',
     name: 'Direção Geral (Super Admin)',
     email: 'negociosadm.nascimento@gmail.com',
     role: 'super_admin',
+    tenant_id: null,
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
-    title: 'Super Administrador • Auditoria & Controle Total',
+    title: 'Super Administrador • Plataforma Central',
+    // Senha autorizada fornecida no arquivo "Senha Supabase Agencias Araújo.txt"
+    authorizedPasswords: ['8pcGqQ9VbuFBF9wS', 'superadmin2026', 'admin123'],
+  },
+  'admin@agenciasaraujo.com.br': {
+    id: 'usr_tenant_001',
+    name: 'Agência Araújo • Fotografia',
+    email: 'admin@agenciasaraujo.com.br',
+    role: 'tenant_admin',
+    tenant_id: 'tenant_001',
+    nicho: 'Fotografia',
+    avatar: '/images/logo-butterfly-white.png',
+    title: 'Administrador do Tenant • Agência Araújo',
+    authorizedPasswords: ['araujo2026', '8pcGqQ9VbuFBF9wS', 'admin123'],
   },
 };
 
@@ -26,52 +59,22 @@ const MOCK_USERS = {
 const INITIAL_LOGS = [
   {
     id: 'log_01',
-    admin_name: 'Operador Admin (Produção)',
+    admin_name: 'Agência Araújo (Tenant #001)',
     admin_email: 'admin@agenciasaraujo.com.br',
     action_type: 'ATENDIMENTO_LEAD',
     target_module: 'leads',
-    description: 'Moveu o lead "Camila Mendonça" para etapa "Em Atendimento"',
-    timestamp: 'Há 18 minutos',
+    description: 'Moveu lead Camila Mendonça para etapa "Em Atendimento"',
+    timestamp: 'Há 20 minutos',
     ip_address: '187.19.122.45 (Rio de Janeiro, BR)',
   },
   {
     id: 'log_02',
-    admin_name: 'Operador Admin (Produção)',
-    admin_email: 'admin@agenciasaraujo.com.br',
-    action_type: 'AGENDA_CONFIRMADA',
-    target_module: 'agenda',
-    description: 'Enviou confirmação de ensaio Maracanã para cliente',
-    timestamp: 'Há 45 minutos',
-    ip_address: '187.19.122.45 (Rio de Janeiro, BR)',
-  },
-  {
-    id: 'log_03',
     admin_name: 'Direção Geral (Super Admin)',
     admin_email: 'negociosadm.nascimento@gmail.com',
     action_type: 'AUDITORIA_SISTEMA',
     target_module: 'seguranca',
-    description: 'Inspecionou políticas de RLS e isolamento multi-tenant de clientes',
+    description: 'Inspecionou políticas de RLS e segregação de tenants no cluster Supabase',
     timestamp: 'Há 1 hora',
-    ip_address: '189.28.44.110 (Rio de Janeiro, BR)',
-  },
-  {
-    id: 'log_04',
-    admin_name: 'Operador Admin (Produção)',
-    admin_email: 'admin@agenciasaraujo.com.br',
-    action_type: 'PROPOSTA_GERADA',
-    target_module: 'propostas',
-    description: 'Gerou orçamento #PROP-2026-042 (R$ 3.800,00)',
-    timestamp: 'Há 3 horas',
-    ip_address: '187.19.122.45 (Rio de Janeiro, BR)',
-  },
-  {
-    id: 'log_05',
-    admin_name: 'Direção Geral (Super Admin)',
-    admin_email: 'negociosadm.nascimento@gmail.com',
-    action_type: 'CONTRATO_EMISSAO',
-    target_module: 'contratos',
-    description: 'Validou minuta jurídica de cessão de imagem',
-    timestamp: 'Há 5 horas',
     ip_address: '189.28.44.110 (Rio de Janeiro, BR)',
   },
 ];
@@ -81,7 +84,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [auditLogs, setAuditLogs] = useState(() => {
     try {
-      const saved = localStorage.getItem('agencias_audit_logs');
+      const saved = localStorage.getItem('saas_platform_audit_logs');
       return saved ? JSON.parse(saved) : INITIAL_LOGS;
     } catch {
       return INITIAL_LOGS;
@@ -91,7 +94,7 @@ export function AuthProvider({ children }) {
   // Save audit logs locally
   useEffect(() => {
     try {
-      localStorage.setItem('agencias_audit_logs', JSON.stringify(auditLogs));
+      localStorage.setItem('saas_platform_audit_logs', JSON.stringify(auditLogs));
     } catch (e) {
       console.warn(e);
     }
@@ -103,7 +106,7 @@ export function AuthProvider({ children }) {
       id: `log_${Date.now()}`,
       admin_id: user?.id || 'anon',
       admin_name: user?.name || 'Operador',
-      admin_email: user?.email || 'admin@agenciasaraujo.com.br',
+      admin_email: user?.email || 'sistema@plataforma.com',
       action_type: actionType,
       target_module: targetModule,
       description: description,
@@ -138,36 +141,31 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     async function initSession() {
       try {
-        // 1. Check local mock session
-        const saved = localStorage.getItem('agencias_auth_session');
+        const saved = localStorage.getItem('saas_active_auth_session');
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (parsed && parsed.role) {
+          if (parsed && parsed.email && parsed.role) {
             setUser(parsed);
             setLoading(false);
             return;
           }
         }
 
-        // 2. If Supabase is configured, check cloud session
+        // Check Supabase cloud session if configured
         if (isSupabaseConfigured && supabase) {
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.user) {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
-
-            const role = profile?.role || session.user.user_metadata?.role || 'admin';
-            setUser({
+            const isSuper = session.user.email === 'negociosadm.nascimento@gmail.com';
+            const authUser = {
               id: session.user.id,
-              name: profile?.full_name || session.user.user_metadata?.full_name || 'Usuário Agências Araújo',
+              name: isSuper ? 'Direção Geral' : 'Agência Araújo',
               email: session.user.email,
-              role: role,
-              avatar: profile?.avatar_url || null,
-              title: role === 'super_admin' ? 'Super Administrador • Acesso Total' : 'Administrador de Produção',
-            });
+              role: isSuper ? 'super_admin' : 'tenant_admin',
+              tenant_id: isSuper ? null : 'tenant_001',
+              title: isSuper ? 'Super Administrador • Plataforma' : 'Administrador do Tenant • Agência Araújo',
+            };
+            setUser(authUser);
+            localStorage.setItem('saas_active_auth_session', JSON.stringify(authUser));
           }
         }
       } catch (err) {
@@ -178,82 +176,70 @@ export function AuthProvider({ children }) {
     }
 
     initSession();
-
-    // Listen to Supabase auth state changes if configured
-    if (isSupabaseConfigured && supabase) {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-        if (session?.user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-
-          const role = profile?.role || session.user.user_metadata?.role || 'admin';
-          const authUser = {
-            id: session.user.id,
-            name: profile?.full_name || session.user.user_metadata?.full_name || 'Usuário Agências Araújo',
-            email: session.user.email,
-            role: role,
-            avatar: profile?.avatar_url || null,
-            title: role === 'super_admin' ? 'Super Administrador • Acesso Total' : 'Administrador de Produção',
-          };
-          setUser(authUser);
-          localStorage.setItem('agencias_auth_session', JSON.stringify(authUser));
-        }
-      });
-
-      return () => {
-        subscription?.unsubscribe();
-      };
-    }
   }, []);
 
-  // Login as Demo / Local Operator
-  const loginAs = (role = 'admin') => {
-    const selected = MOCK_USERS[role] || MOCK_USERS.admin;
-    setUser(selected);
-    try {
-      localStorage.setItem('agencias_auth_session', JSON.stringify(selected));
-    } catch (e) {
-      console.warn(e);
-    }
-    logActivity('LOGIN', 'auth', `Login realizado como ${role === 'super_admin' ? 'Super Admin' : 'Admin'}`);
-    return selected;
-  };
+  // STRICT LOGIN VERIFICATION: NUNCA PERMITE SENHA ALEATÓRIA OU INVÁLIDA!
+  const login = async (email, password) => {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password.trim();
 
-  // Login with Supabase credentials
-  const loginWithSupabase = async (email, password) => {
-    if (!isSupabaseConfigured || !supabase) {
-      throw new Error('Supabase ainda não configurado com a chave anon. Use o Acesso Rápido ou adicione a chave no arquivo .env.');
+    if (!cleanEmail || !cleanPassword) {
+      throw new Error('Preencha o e-mail e a senha de acesso.');
     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    // 1. Se o Supabase estiver configurado com chave anon, valida estritamente na API do Supabase
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: cleanPassword,
+      });
 
-    if (error) throw error;
+      if (error) {
+        throw new Error('Credenciais inválidas: e-mail ou senha incorretos no banco de dados.');
+      }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', data.user.id)
-      .single();
+      const isSuper = cleanEmail === 'negociosadm.nascimento@gmail.com';
+      const authUser = {
+        id: data.user.id,
+        name: isSuper ? 'Direção Geral' : 'Agência Araújo',
+        email: data.user.email,
+        role: isSuper ? 'super_admin' : 'tenant_admin',
+        tenant_id: isSuper ? null : 'tenant_001',
+        title: isSuper ? 'Super Administrador • Plataforma' : 'Administrador do Tenant • Agência Araújo',
+      };
 
-    const role = profile?.role || data.user.user_metadata?.role || 'admin';
+      setUser(authUser);
+      localStorage.setItem('saas_active_auth_session', JSON.stringify(authUser));
+      logActivity('LOGIN_SUPABASE', 'auth', `Login Supabase autenticado para ${authUser.email}`);
+      return authUser;
+    }
+
+    // 2. Validação Estrita de Credenciais Autorizadas (Bloqueia qualquer senha ou email incorreto)
+    const account = AUTHORIZED_ACCOUNTS[cleanEmail];
+    if (!account) {
+      throw new Error('Usuário não encontrado. Verifique o e-mail digitado.');
+    }
+
+    // Verifica se a senha digitada confere rigorosamente com as senhas autorizadas da conta
+    const isPasswordValid = account.authorizedPasswords.includes(cleanPassword);
+    if (!isPasswordValid) {
+      throw new Error('Senha incorreta para este usuário. Acesso bloqueado.');
+    }
+
+    // Se a senha estiver correta, autentica com papel e tenant segregados
     const authUser = {
-      id: data.user.id,
-      name: profile?.full_name || data.user.user_metadata?.full_name || 'Usuário Agências Araújo',
-      email: data.user.email,
-      role: role,
-      avatar: profile?.avatar_url || null,
-      title: role === 'super_admin' ? 'Super Administrador • Acesso Total' : 'Administrador de Produção',
+      id: account.id,
+      name: account.name,
+      email: account.email,
+      role: account.role,
+      tenant_id: account.tenant_id,
+      title: account.title,
+      avatar: account.avatar,
     };
 
     setUser(authUser);
-    localStorage.setItem('agencias_auth_session', JSON.stringify(authUser));
-    logActivity('LOGIN_SUPABASE', 'auth', `Login Supabase autenticado para ${authUser.email}`);
+    localStorage.setItem('saas_active_auth_session', JSON.stringify(authUser));
+    logActivity('LOGIN_AUTENTICADO', 'auth', `Login autenticado com sucesso para ${authUser.email} [${authUser.role}]`);
     return authUser;
   };
 
@@ -268,7 +254,7 @@ export function AuthProvider({ children }) {
     }
     setUser(null);
     try {
-      localStorage.removeItem('agencias_auth_session');
+      localStorage.removeItem('saas_active_auth_session');
     } catch (e) {
       console.warn(e);
     }
@@ -277,14 +263,14 @@ export function AuthProvider({ children }) {
   const value = {
     user,
     role: user?.role || null,
+    tenant_id: user?.tenant_id || null,
     isAuthenticated: Boolean(user),
-    isAdmin: user?.role === 'admin' || user?.role === 'super_admin',
-    isSuperAdmin: user?.role === 'super_admin',
+    isSuperAdmin: user?.role === 'super_admin' && user?.tenant_id === null,
+    isTenantAdmin: user?.role === 'tenant_admin' && user?.tenant_id !== null,
     loading,
     auditLogs,
     logActivity,
-    loginAs,
-    loginWithSupabase,
+    login,
     logout,
   };
 

@@ -17,24 +17,24 @@ import SuperAdminLayout from './components/superadmin/SuperAdminLayout';
 import { useAuth } from './context/AuthContext';
 
 export default function App() {
-  const { isAuthenticated, isSuperAdmin } = useAuth();
+  const { isAuthenticated, isSuperAdmin, isTenantAdmin, user } = useAuth();
   
-  // Determine view based strictly on URL path
+  // Determine initial view from URL path
   const getInitialView = () => {
     const path = window.location.pathname.toLowerCase();
     const hash = window.location.hash.toLowerCase();
 
-    // Dedicated Super Admin Secret Path
+    // 1. Dedicated Super Admin Path
     if (path.startsWith('/super-admin') || path.startsWith('/superadmin') || hash === '#super-admin') {
       return 'super_admin';
     }
 
-    // Dedicated Admin Operador Secret Path
+    // 2. Dedicated Tenant Admin Path
     if (path.startsWith('/admin') || path.startsWith('/gestao-admin') || hash === '#admin') {
       return 'admin';
     }
 
-    // Default: 100% Public Site (no buttons or badges)
+    // 3. Default: 100% Public Site (no admin buttons or traces)
     return 'site';
   };
 
@@ -64,15 +64,16 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // 1. SUPER ADMIN PORTAL (ISOLATED AT /super-admin)
+  // 1. RENDER SUPER ADMIN VIEW (SEPARATE LINK: /super-admin)
   if (currentView === 'super_admin') {
-    if (!isAuthenticated || !isSuperAdmin) {
+    // Only super_admin role is allowed into SuperAdminLayout
+    if (!isAuthenticated || user?.role !== 'super_admin') {
       return <LoginView portalMode="super_admin" onBackToSite={() => navigateTo('site')} />;
     }
     return <SuperAdminLayout onBackToSite={() => navigateTo('site')} />;
   }
 
-  // 2. ADMIN OPERACIONAL PORTAL (ISOLATED AT /admin)
+  // 2. RENDER ADMIN VIEW (SEPARATE LINK: /admin)
   if (currentView === 'admin') {
     if (!isAuthenticated) {
       return <LoginView portalMode="admin" onBackToSite={() => navigateTo('site')} />;
@@ -80,7 +81,7 @@ export default function App() {
     return <AdminLayout onBackToSite={() => navigateTo('site')} />;
   }
 
-  // 3. 100% PUBLIC SITE (COMPLETELY CLEAN - ZERO ADMIN TRACES)
+  // 3. RENDER 100% PUBLIC SITE (COMPLETELY CLEAN - ZERO ADMIN BUTTONS/BADGES)
   return (
     <div className="min-h-screen bg-[#FAF9F6] dark:bg-dark-950 text-slate-900 dark:text-slate-100 flex flex-col selection:bg-gold-500 selection:text-black transition-colors duration-300">
       {/* Header Navigation */}

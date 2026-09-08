@@ -1,128 +1,134 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { 
-  TrendingUp, Users, Calendar, DollarSign, ArrowUpRight, 
-  MessageCircle, Plus, Eye, Clock, CheckCircle, ShieldCheck, 
-  AlertTriangle, ExternalLink, Sparkles, Database, FileText
+  Eye, Users, MessageCircle, Instagram, Calendar, 
+  ArrowUpRight, Plus, Clock, FileText, CheckCircle2, 
+  Camera, Sparkles, ChevronRight, Phone
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
-import { isSupabaseConfigured, SUPABASE_PROJECT_ID } from '../../../lib/supabase';
 
 export default function DashboardModule({ onNavigate }) {
-  const { user, isSuperAdmin } = useAuth();
-  const [showFinancials, setShowFinancials] = useState(true);
+  const { user } = useAuth();
 
-  // Mock initial dashboard data (ready to sync with Supabase tables)
-  const stats = [
+  // Metrics requested specifically by the user:
+  // 1.248 visitas, 43 leads, 27 cliques WhatsApp, 18 cliques Instagram
+  const overviewStats = [
     {
-      title: 'Faturamento do Mês',
-      value: isSuperAdmin ? (showFinancials ? 'R$ 48.500,00' : '••••••••') : 'R$ ••••••••',
-      badge: '+18.2% vs mês anterior',
-      icon: DollarSign,
-      color: 'from-amber-500/20 to-gold/10 border-gold/40 text-gold',
-      superOnly: true,
+      title: 'Visitas no Site',
+      value: '1.248',
+      change: '+24% este mês',
+      icon: Eye,
+      color: 'from-amber-500/20 to-gold/10 border-gold/30 text-gold',
+      linkText: 'Ver Tráfego',
+      target: 'site'
     },
     {
-      title: 'Leads Ativos',
-      value: '24',
-      badge: '6 novos hoje',
+      title: 'Leads Captados',
+      value: '43',
+      change: '+8 novos esta semana',
       icon: Users,
       color: 'from-blue-500/20 to-cyan-500/10 border-blue-500/30 text-blue-400',
+      linkText: 'Abrir CRM',
+      target: 'leads'
     },
     {
-      title: 'Ensaios Agendados',
-      value: '18',
-      badge: '4 esta semana no RJ',
-      icon: Calendar,
-      color: 'from-purple-500/20 to-pink-500/10 border-purple-500/30 text-purple-400',
-    },
-    {
-      title: 'Propostas em Negociação',
-      value: '9',
-      badge: 'R$ 14.800 em aberto',
-      icon: FileText,
+      title: 'Cliques WhatsApp',
+      value: '27',
+      change: 'Conversão direta 62%',
+      icon: MessageCircle,
       color: 'from-emerald-500/20 to-teal-500/10 border-emerald-500/30 text-emerald-400',
+      linkText: 'Ver Conversas',
+      target: 'WhatsApp'
+    },
+    {
+      title: 'Cliques Instagram',
+      value: '18',
+      change: '@agenciasaraujo',
+      icon: Instagram,
+      color: 'from-pink-500/20 to-purple-500/10 border-pink-500/30 text-pink-400',
+      linkText: 'Ver Portfólio',
+      target: 'portfólio'
     },
   ];
 
+  // Upcoming Sessions requested: Casamento Marina (Sábado), Ensaio Gestante (Domingo)
   const upcomingSessions = [
+    {
+      client: 'Marina & Gustavo',
+      type: 'Casamento Clássico (Cerimônia & Festa)',
+      date: 'Sábado • 16:30',
+      location: 'Copacabana Palace / Mansão Santa Teresa, RJ',
+      status: 'Confirmado',
+      statusColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+      phone: '(21) 98132-4411'
+    },
+    {
+      client: 'Juliana & Rodrigo',
+      type: 'Ensaio Gestante Golden Hour',
+      date: 'Domingo • 16:00',
+      location: 'Praia do Arpoador / Vista Chinesa, RJ',
+      status: 'Confirmado',
+      statusColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+      phone: '(21) 99123-4567'
+    },
     {
       client: 'Dr. Roberto Silveira',
       type: 'Retratos Corporativos Executive',
+      date: 'Segunda-feira • 10:00',
       location: 'Studio Barra da Tijuca, RJ',
-      date: 'Amanhã, 10:00',
       status: 'Confirmado',
       statusColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-      whatsapp: '5521998887766'
-    },
-    {
-      client: 'Mariana & Lucas',
-      type: 'Ensaio Pré-Wedding',
-      location: 'Praia de Copacabana / Arpoador',
-      date: 'Sexta, 16:30',
-      status: 'Pendente Sinal',
-      statusColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-      whatsapp: '5521987654321'
-    },
-    {
-      client: 'Le Vin Bistrô Gourmet',
-      type: 'Campanha Gastronômica & Drinks',
-      location: 'Ipanema, RJ',
-      date: 'Sábado, 09:00',
-      status: 'Confirmado',
-      statusColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-      whatsapp: '5521976543210'
-    },
-    {
-      client: 'Cobertura Especial Maracanã',
-      type: 'Grande Escala / VIP Lounge',
-      location: 'Estádio Jornalista Mário Filho (Maracanã)',
-      date: 'Domingo, 14:00',
-      status: 'Confirmado',
-      statusColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-      whatsapp: '5521981324411'
-    },
+      phone: '(21) 99888-7766'
+    }
   ];
 
+  // Recent Leads requested: João Silva (Casamento), Maria Souza (15 anos)
   const recentLeads = [
     {
-      name: 'Camila Ferreira',
-      service: 'Retratos Pessoais & Branding',
-      phone: '(21) 99123-4567',
-      time: 'Há 12 minutos',
-      source: 'Formulário do Site'
+      name: 'João Silva',
+      service: 'Fotografia de Casamento Completo 2026',
+      phone: '(21) 98765-4321',
+      time: 'Há 15 minutos',
+      source: 'WhatsApp Direto',
+      status: 'Novo Lead',
+      statusColor: 'bg-gold/20 text-gold-300 border-gold/30'
     },
     {
-      name: 'Grupo Safra Rio',
-      service: 'Cobertura Evento Corporativo',
-      phone: '(21) 98877-6655',
+      name: 'Maria Souza',
+      service: 'Festa de 15 Anos (Debutante Luxo)',
+      phone: '(21) 97654-3210',
       time: 'Há 1 hora',
-      source: 'WhatsApp Direto'
+      source: 'Formulário do Site',
+      status: 'Em Atendimento',
+      statusColor: 'bg-blue-500/20 text-blue-300 border-blue-500/30'
     },
     {
-      name: 'Chef Alessandro Rossi',
-      service: 'Fotografia Gastronômica Menu 2026',
-      phone: '(21) 97766-5544',
+      name: 'Camila Ferreira',
+      service: 'Ensaio Branding & Posicionamento',
+      phone: '(21) 99123-4567',
       time: 'Há 3 horas',
-      source: 'Instagram'
+      source: 'Instagram',
+      status: 'Proposta Enviada',
+      statusColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30'
     },
   ];
 
   return (
     <div className="space-y-8">
       {/* Welcome Banner */}
-      <div className="rounded-3xl bg-gradient-to-r from-slate-900 via-[#0E1524] to-slate-900 border border-gold/30 p-6 sm:p-8 relative overflow-hidden shadow-2xl">
-        <div className="absolute -right-16 -top-16 w-64 h-64 bg-gold/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="rounded-3xl bg-gradient-to-r from-slate-900 via-[#10141E] to-slate-900 border border-gold/30 p-6 sm:p-8 relative overflow-hidden shadow-2xl">
+        <div className="absolute -right-16 -top-16 w-64 h-64 bg-gold/15 rounded-full blur-3xl pointer-events-none" />
+        
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold/10 border border-gold/30 text-gold-300 text-xs font-mono mb-3">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>{isSuperAdmin ? 'Ambiente Super Admin • Acesso Total' : 'Ambiente Admin Operacional'}</span>
+              <Camera className="w-3.5 h-3.5 text-gold" />
+              <span>Agência Araújo • Fotografia & Audiovisual RJ (Tenant #001)</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-serif font-bold text-white tracking-wide">
-              Bem-vindo, {user?.name || 'Administrador'}!
+              Olá, Agência Araújo
             </h1>
             <p className="text-slate-400 text-sm mt-1 max-w-xl">
-              Painel de controle unificado de Agências Araújo Fotografia & Audiovisual RJ. Acompanhe atendimentos, ensaios e métricas em tempo real.
+              Aqui está a visão consolidada do seu negócio: tráfego do site, novos contatos de ensaios e atendimentos em tempo real.
             </p>
           </div>
 
@@ -145,102 +151,71 @@ export default function DashboardModule({ onNavigate }) {
         </div>
       </div>
 
-      {/* Supabase Connection Pill Box */}
-      <div className="rounded-2xl bg-slate-900/60 border border-slate-800 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-xl ${isSupabaseConfigured ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}`}>
-            <Database className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-white">Banco de Dados Supabase:</span>
-              <code className="text-xs text-gold-300 font-mono bg-black/40 px-2 py-0.5 rounded border border-white/5">{SUPABASE_PROJECT_ID}</code>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${isSupabaseConfigured ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}`}>
-                {isSupabaseConfigured ? 'Pronto & Ativo' : 'Aguardando Chave Anon'}
-              </span>
-            </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              {isSupabaseConfigured 
-                ? 'Conectado à nuvem. Dados sincronizados em tempo real.'
-                : 'A estrutura SQL completa já está gerada em supabase/schema.sql. Basta inserir a chave anon no arquivo .env para sincronização live.'}
-            </p>
-          </div>
+      {/* OVERVIEW STATS (MATCHING USER SPECIFICATION) */}
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-xs font-mono uppercase tracking-wider text-slate-400 font-semibold">
+            Visão Geral de Desempenho
+          </h2>
+          <span className="text-[11px] font-mono text-gold-300">Tempo Real</span>
         </div>
-        <a
-          href={`https://supabase.com/dashboard/project/${SUPABASE_PROJECT_ID}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-xs text-gold hover:text-gold-light hover:underline font-mono"
-        >
-          <span>Abrir Console Supabase</span>
-          <ExternalLink className="w-3.5 h-3.5" />
-        </a>
-      </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        {stats.map((item, idx) => {
-          const Icon = item.icon;
-          return (
-            <div
-              key={idx}
-              className={`rounded-2xl bg-gradient-to-b ${item.color} bg-slate-900/80 backdrop-blur-xl border p-5 relative overflow-hidden transition-all hover:translate-y-[-2px]`}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  {item.title}
-                </span>
-                <div className="p-2 rounded-xl bg-black/30">
-                  <Icon className="w-4 h-4" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          {overviewStats.map((item, idx) => {
+            const Icon = item.icon;
+            return (
+              <div
+                key={idx}
+                onClick={() => onNavigate?.(item.target)}
+                className={`cursor-pointer rounded-2xl bg-gradient-to-b ${item.color} bg-slate-900/80 backdrop-blur-xl border p-5 relative overflow-hidden transition-all hover:translate-y-[-2px] hover:border-gold/60`}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                    {item.title}
+                  </span>
+                  <div className="p-2 rounded-xl bg-black/40">
+                    <Icon className="w-4 h-4" />
+                  </div>
+                </div>
+
+                <div className="flex items-baseline justify-between">
+                  <span className="text-3xl font-serif font-bold text-white tracking-wide">
+                    {item.value}
+                  </span>
+                  <span className="text-[11px] text-slate-400 flex items-center gap-1 group-hover:text-gold">
+                    <span>{item.linkText}</span>
+                    <ArrowUpRight className="w-3 h-3" />
+                  </span>
+                </div>
+
+                <div className="mt-3 text-xs text-slate-400 font-medium">
+                  {item.change}
                 </div>
               </div>
-
-              <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-serif font-bold text-white">
-                  {item.value}
-                </span>
-                {item.superOnly && isSuperAdmin && (
-                  <button
-                    onClick={() => setShowFinancials(!showFinancials)}
-                    title="Alternar visibilidade do faturamento"
-                    className="text-slate-400 hover:text-gold p-1"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-
-              <div className="mt-3 flex items-center justify-between text-xs">
-                <span className="text-slate-400 font-medium">{item.badge}</span>
-                {item.superOnly && !isSuperAdmin && (
-                  <span className="inline-flex items-center gap-1 text-[10px] text-amber-400 font-mono">
-                    <ShieldCheck className="w-3 h-3" /> Super Admin
-                  </span>
-                )}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
-      {/* Two Column Grid: Upcoming Sessions & Recent Leads */}
+      {/* TWO COLUMNS: PRÓXIMOS ENSAIOS & ÚLTIMOS LEADS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
-        {/* Upcoming Sessions Card */}
-        <div className="rounded-3xl bg-slate-900/70 backdrop-blur-xl border border-white/10 p-6 shadow-xl">
+        {/* Próximos Ensaios (Casamento Marina, Ensaio Gestante, etc.) */}
+        <div className="rounded-3xl bg-slate-900/80 backdrop-blur-xl border border-white/10 p-6 shadow-xl">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-lg font-serif font-bold text-white flex items-center gap-2">
+              <h3 className="text-lg font-serif font-bold text-white flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-gold" />
-                <span>Próximas Sessões Agendadas</span>
-              </h2>
-              <p className="text-xs text-slate-400">Ensaios fotográficos e gravações em locações no Rio de Janeiro</p>
+                <span>Próximos Ensaios</span>
+              </h3>
+              <p className="text-xs text-slate-400">Ensaios fotográficos confirmados na agenda</p>
             </div>
             <button
               onClick={() => onNavigate?.('agenda')}
-              className="text-xs text-gold hover:text-gold-light font-semibold hover:underline"
+              className="text-xs text-gold hover:text-gold-light font-semibold hover:underline flex items-center gap-1"
             >
-              Ver Todas
+              <span>Ver Agenda Completa</span>
+              <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
@@ -248,7 +223,7 @@ export default function DashboardModule({ onNavigate }) {
             {upcomingSessions.map((session, index) => (
               <div
                 key={index}
-                className="p-4 rounded-2xl bg-black/30 border border-white/5 hover:border-gold/30 transition-all flex items-center justify-between gap-4"
+                className="p-4 rounded-2xl bg-black/40 border border-white/5 hover:border-gold/30 transition-all flex items-center justify-between gap-4"
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 mb-1">
@@ -266,10 +241,10 @@ export default function DashboardModule({ onNavigate }) {
                     {session.date}
                   </span>
                   <a
-                    href={`https://wa.me/${session.whatsapp}?text=Olá!%20Confirmando%20nosso%20ensaio%20da%20Agências%20Araújo.`}
+                    href={`https://wa.me/55${session.phone.replace(/\D/g, '')}?text=Olá%20${encodeURIComponent(session.client)}!%20Confirmando%20nosso%20ensaio%20fotográfico.`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    title="Chamar cliente no WhatsApp"
+                    title="Chamar no WhatsApp"
                     className="p-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-colors"
                   >
                     <MessageCircle className="w-4 h-4" />
@@ -280,21 +255,22 @@ export default function DashboardModule({ onNavigate }) {
           </div>
         </div>
 
-        {/* Recent Leads / Messages Card */}
-        <div className="rounded-3xl bg-slate-900/70 backdrop-blur-xl border border-white/10 p-6 shadow-xl">
+        {/* Últimos Leads (João Silva, Maria Souza, etc.) */}
+        <div className="rounded-3xl bg-slate-900/80 backdrop-blur-xl border border-white/10 p-6 shadow-xl">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-lg font-serif font-bold text-white flex items-center gap-2">
+              <h3 className="text-lg font-serif font-bold text-white flex items-center gap-2">
                 <Users className="w-5 h-5 text-gold" />
-                <span>Leads & Solicitações Recentes</span>
-              </h2>
-              <p className="text-xs text-slate-400">Pessoas e empresas que entraram em contato hoje</p>
+                <span>Últimos Leads</span>
+              </h3>
+              <p className="text-xs text-slate-400">Solicitações recentes recebidas via site e WhatsApp</p>
             </div>
             <button
               onClick={() => onNavigate?.('leads')}
-              className="text-xs text-gold hover:text-gold-light font-semibold hover:underline"
+              className="text-xs text-gold hover:text-gold-light font-semibold hover:underline flex items-center gap-1"
             >
-              Ver Funil
+              <span>Ver Funil CRM</span>
+              <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
@@ -302,17 +278,17 @@ export default function DashboardModule({ onNavigate }) {
             {recentLeads.map((lead, index) => (
               <div
                 key={index}
-                className="p-4 rounded-2xl bg-black/30 border border-white/5 hover:border-gold/30 transition-all flex items-center justify-between gap-4"
+                className="p-4 rounded-2xl bg-black/40 border border-white/5 hover:border-gold/30 transition-all flex items-center justify-between gap-4"
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-semibold text-white text-sm">{lead.name}</span>
-                    <span className="text-[10px] font-mono text-slate-400 bg-white/5 px-2 py-0.5 rounded">
-                      {lead.source}
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${lead.statusColor}`}>
+                      {lead.status}
                     </span>
                   </div>
                   <p className="text-xs text-gold-300 font-medium truncate">{lead.service}</p>
-                  <p className="text-xs text-slate-400 font-mono mt-0.5">{lead.phone}</p>
+                  <p className="text-xs text-slate-400 font-mono mt-0.5">{lead.phone} • {lead.source}</p>
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
@@ -321,7 +297,7 @@ export default function DashboardModule({ onNavigate }) {
                     {lead.time}
                   </span>
                   <a
-                    href={`https://wa.me/55${lead.phone.replace(/\D/g, '')}?text=Olá%20${encodeURIComponent(lead.name)},%20recebemos%20sua%20solicitação%20na%20Agências%20Araújo!`}
+                    href={`https://wa.me/55${lead.phone.replace(/\D/g, '')}?text=Olá%20${encodeURIComponent(lead.name)},%20recebemos%20sua%20solicitação%20na%20Agência%20Araújo!`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-colors"
@@ -333,27 +309,24 @@ export default function DashboardModule({ onNavigate }) {
               </div>
             ))}
           </div>
-
-          {/* Quick Actions Row */}
-          <div className="mt-6 pt-6 border-t border-white/10 grid grid-cols-2 gap-3">
-            <button
-              onClick={() => onNavigate?.('formularios')}
-              className="py-2.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-slate-300 hover:text-white flex items-center justify-center gap-2 transition-colors"
-            >
-              <FileText className="w-3.5 h-3.5 text-gold" />
-              <span>Ver Formulários Site</span>
-            </button>
-            <button
-              onClick={() => onNavigate?.('whatsapp')}
-              className="py-2.5 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-xs font-semibold text-emerald-300 flex items-center justify-center gap-2 transition-colors"
-            >
-              <MessageCircle className="w-3.5 h-3.5" />
-              <span>Central WhatsApp</span>
-            </button>
-          </div>
         </div>
 
       </div>
+
+      {/* Direct Quick Action Links */}
+      <div className="p-4 rounded-2xl bg-black/30 border border-white/10 flex flex-wrap items-center justify-between gap-4 text-xs">
+        <div className="flex items-center gap-2 text-slate-400">
+          <Sparkles className="w-4 h-4 text-gold" />
+          <span>Precisa personalizar seu site, fotos ou cores da agência?</span>
+        </div>
+        <button
+          onClick={() => onNavigate?.('personalizar')}
+          className="px-4 py-2 rounded-xl bg-gold/10 hover:bg-gold/20 border border-gold/40 text-gold-300 hover:text-white font-bold text-xs uppercase tracking-wider transition-colors"
+        >
+          Ir para Personalização da Agência
+        </button>
+      </div>
+
     </div>
   );
 }
