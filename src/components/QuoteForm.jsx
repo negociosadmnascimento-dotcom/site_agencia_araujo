@@ -64,7 +64,26 @@ export default function QuoteForm() {
     setTimeout(() => {
       setIsSubmitting(false);
       setSubmitted(true);
-      
+
+      // Persist to localStorage bridge so Admin panel can read real submissions
+      try {
+        const existing = JSON.parse(localStorage.getItem('site_form_submissions') || '[]');
+        const newEntry = {
+          id: 'sub_' + Date.now(),
+          name: formData.name,
+          email: formData.email || '',
+          phone: formData.phone,
+          service: formData.service,
+          eventDate: formData.date || '',
+          message: formData.message,
+          createdAt: new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }),
+          read: false,
+          source: 'Formulário do Site',
+        };
+        existing.unshift(newEntry);
+        localStorage.setItem('site_form_submissions', JSON.stringify(existing));
+      } catch (_) {}
+
       // Open WhatsApp automatically in a new tab
       window.open(whatsappUrl, '_blank');
     }, 600);

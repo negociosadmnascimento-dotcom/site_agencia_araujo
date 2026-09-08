@@ -152,7 +152,7 @@ export default function LoginView({ onBackToSite, portalMode = 'admin' }) {
                 </h1>
                 <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-mono uppercase tracking-wider">
                   <KeyRound className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Painel Operacional • Tenant #001</span>
+                  <span>Acesso Restrito à Equipe</span>
                 </div>
                 <p className="text-xs text-slate-400 mt-2">
                   Gestão do site, portfólio, ensaios e atendimento da Agência Araújo.

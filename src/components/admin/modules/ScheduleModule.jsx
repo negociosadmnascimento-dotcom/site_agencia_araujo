@@ -9,6 +9,12 @@ export default function ScheduleModule() {
   const { isSuperAdmin } = useAuth();
   const [showAddModal, setShowAddModal] = useState(false);
   const [filterStatus, setFilterStatus] = useState('Todos');
+  const [toast, setToast] = useState(null);
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const [sessions, setSessions] = useState([
     {
@@ -108,12 +114,20 @@ export default function ScheduleModule() {
       }
     ]);
     setShowAddModal(false);
+    showToast(`Sessão de "${newSession.client}" adicionada à agenda!`);
   };
 
   const filtered = sessions.filter(s => filterStatus === 'Todos' || s.status === filterStatus);
 
   return (
     <div className="space-y-8">
+      {/* Toast */}
+      {toast && (
+        <div className="fixed top-6 right-6 z-[999] px-5 py-3 rounded-2xl text-sm font-semibold shadow-2xl bg-emerald-600 text-white flex items-center gap-2">
+          <CheckCircle className="w-4 h-4" />
+          {toast}
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>

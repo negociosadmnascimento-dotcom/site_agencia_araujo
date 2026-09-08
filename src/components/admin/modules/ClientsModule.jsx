@@ -10,6 +10,12 @@ export default function ClientsModule() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const [clients, setClients] = useState([
     {
@@ -119,10 +125,18 @@ export default function ClientsModule() {
     ]);
     setNewClient({ name: '', role: '', category: 'Retratos Pessoais', email: '', phone: '', notes: '' });
     setShowAddModal(false);
+    showToast(`Cliente "${newClient.name}" cadastrado com sucesso!`);
   };
 
   return (
     <div className="space-y-8">
+      {/* Toast */}
+      {toast && (
+        <div className="fixed top-6 right-6 z-[999] px-5 py-3 rounded-2xl text-sm font-semibold shadow-2xl bg-emerald-600 text-white flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4" />
+          {toast}
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>

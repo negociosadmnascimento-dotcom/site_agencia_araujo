@@ -139,7 +139,7 @@ export default function AdminLayout({ onBackToSite }) {
                   AGÊNCIA ARAÚJO
                 </span>
                 <span className="text-[10px] font-mono uppercase tracking-widest text-gold-300 block truncate">
-                  Tenant #001 • Fotografia
+                  Painel Administrativo
                 </span>
               </div>
             </div>

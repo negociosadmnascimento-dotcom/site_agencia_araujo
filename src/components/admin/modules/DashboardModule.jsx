@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Eye, Users, MessageCircle, Instagram, Calendar, 
   ArrowUpRight, Plus, Clock, FileText, CheckCircle2, 
@@ -8,6 +8,24 @@ import { useAuth } from '../../../context/AuthContext';
 
 export default function DashboardModule({ onNavigate }) {
   const { user } = useAuth();
+  const [leadCount, setLeadCount] = useState(43);
+  const [unreadForms, setUnreadForms] = useState(0);
+
+  useEffect(() => {
+    const update = () => {
+      try {
+        const leads = JSON.parse(localStorage.getItem('admin_leads') || '[]');
+        const siteLeads = JSON.parse(localStorage.getItem('site_form_submissions') || '[]');
+        const readIds = JSON.parse(localStorage.getItem('admin_forms_read_ids') || '[]');
+        setLeadCount(43 + leads.length + siteLeads.length);
+        setUnreadForms(siteLeads.filter(s => !readIds.includes(s.id)).length);
+      } catch (_) {}
+    };
+    update();
+    const interval = setInterval(update, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
 
   // Metrics requested specifically by the user:
   // 1.248 visitas, 43 leads, 27 cliques WhatsApp, 18 cliques Instagram
@@ -23,7 +41,7 @@ export default function DashboardModule({ onNavigate }) {
     },
     {
       title: 'Leads Captados',
-      value: '43',
+      value: String(leadCount),
       change: '+8 novos esta semana',
       icon: Users,
       color: 'from-blue-500/20 to-cyan-500/10 border-blue-500/30 text-blue-400',
@@ -122,7 +140,7 @@ export default function DashboardModule({ onNavigate }) {
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold/10 border border-gold/30 text-gold-300 text-xs font-mono mb-3">
               <Camera className="w-3.5 h-3.5 text-gold" />
-              <span>Agência Araújo • Fotografia & Audiovisual RJ (Tenant #001)</span>
+              <span>Agência Araújo • Fotografia & Audiovisual RJ</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-serif font-bold text-white tracking-wide">
               Olá, Agência Araújo
