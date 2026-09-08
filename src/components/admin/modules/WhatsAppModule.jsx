@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { 
-  MessageCircle, Send, Check, Sparkles, Copy, Phone, 
+  Send, Check, Sparkles, Copy, Phone, 
   Clock, ShieldCheck, CheckCheck, RefreshCw 
 } from 'lucide-react';
+import WhatsAppIcon from '../../../components/icons/WhatsAppIcon';
 import { useAuth } from '../../../context/AuthContext';
 
 export default function WhatsAppModule() {
@@ -60,7 +61,7 @@ export default function WhatsAppModule() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono mb-2">
-            <MessageCircle className="w-3.5 h-3.5" />
+            <WhatsAppIcon className="w-3.5 h-3.5 text-green-400" />
             <span>Módulo 11 • Central Oficial WhatsApp</span>
           </div>
           <h1 className="text-2xl font-serif font-bold text-white">Central de Atendimento WhatsApp</h1>
@@ -176,7 +177,7 @@ export default function WhatsAppModule() {
                 type="submit"
                 className="w-full py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-dark-950 font-bold text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all"
               >
-                <MessageCircle className="w-4 h-4" />
+                <WhatsAppIcon className="w-4 h-4 text-white" />
                 <span>Abrir Conversa no WhatsApp</span>
               </button>
             </form>

@@ -3,6 +3,7 @@ import {
   FileCheck, Plus, Search, Filter, MessageCircle, Copy, Check, 
   ExternalLink, ShieldCheck, Download, Calendar, User, X 
 } from 'lucide-react';
+import WhatsAppIcon from '../../../components/icons/WhatsAppIcon';
 import { useAuth } from '../../../context/AuthContext';
 
 export default function ContractsModule() {
@@ -229,7 +230,7 @@ export default function ContractsModule() {
                   className="p-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 transition-colors"
                   title="Enviar Link de Assinatura via WhatsApp"
                 >
-                  <MessageCircle className="w-4 h-4" />
+                  <WhatsAppIcon className="w-4 h-4 text-green-400" />
                 </a>
               </div>
             </div>

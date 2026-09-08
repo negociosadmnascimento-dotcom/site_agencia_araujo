@@ -3,6 +3,7 @@ import {
   Users, Search, Plus, Filter, MessageCircle, Mail, Phone, 
   Star, DollarSign, Calendar, MoreVertical, CheckCircle2, UserCheck, X
 } from 'lucide-react';
+import WhatsAppIcon from '../../../components/icons/WhatsAppIcon';
 import { useAuth } from '../../../context/AuthContext';
 
 export default function ClientsModule() {
@@ -257,7 +258,7 @@ export default function ClientsModule() {
                           className="p-1 rounded bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
                           title="Conversar no WhatsApp"
                         >
-                          <MessageCircle className="w-3.5 h-3.5" />
+                          <WhatsAppIcon className="w-3.5 h-3.5 text-green-400" />
                         </a>
                       </div>
                       <span className="text-[11px] text-slate-500 block">{client.email}</span>
@@ -293,7 +294,7 @@ export default function ClientsModule() {
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 font-semibold border border-emerald-500/30 transition-colors"
                     >
-                      <MessageCircle className="w-3.5 h-3.5" />
+                      <WhatsAppIcon className="w-3.5 h-3.5 text-green-400" />
                       <span>WhatsApp</span>
                     </a>
                   </td>

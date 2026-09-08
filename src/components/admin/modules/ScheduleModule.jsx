@@ -4,6 +4,7 @@ import {
   Plus, CheckCircle, AlertCircle, MessageCircle, X, ChevronLeft, ChevronRight,
   Globe, Trash2, Check, RefreshCw
 } from 'lucide-react';
+import WhatsAppIcon from '../../../components/icons/WhatsAppIcon';
 import { useAuth } from '../../../context/AuthContext';
 
 const SESSIONS_STORAGE_KEY = 'admin_sessions';
@@ -343,7 +344,7 @@ export default function ScheduleModule() {
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 text-xs font-semibold border border-emerald-500/30 transition-colors"
                   >
-                    <MessageCircle className="w-3.5 h-3.5" />
+                    <WhatsAppIcon className="w-3.5 h-3.5 text-green-400" />
                     <span>WhatsApp</span>
                   </a>
                 )}

@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Globe, Users, UserCheck, Calendar, FileText, 
   History, MessageSquareQuote, Image, Inbox, MessageCircle, 
   CreditCard, FileCheck, LogOut, ExternalLink, Menu, 
-  X, ChevronRight, Palette, Camera, CheckCircle2
+  X, ChevronRight, Palette, CheckCircle2
 } from 'lucide-react';
 import { useAuth, DEFAULT_TENANT_SETTINGS } from '../../context/AuthContext';
 
@@ -34,8 +34,7 @@ export default function AdminLayout({ onBackToSite }) {
       group: 'Visão Geral & Site',
       items: [
         { id: 'Dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { id: 'site', label: 'Meu Site', icon: Globe },
-        { id: 'servicos', label: 'Conteúdo & Serviços', icon: Camera },
+        { id: 'site', label: 'Conf. Institucional', icon: Globe },
       ]
     },
     {
@@ -77,7 +76,6 @@ export default function AdminLayout({ onBackToSite }) {
       case 'Dashboard':
         return <DashboardModule onNavigate={(mod) => setActiveModule(mod)} />;
       case 'site':
-      case 'servicos':
         return <SiteModule />;
       case 'clientes':
         return <ClientsModule />;

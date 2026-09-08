@@ -3,6 +3,7 @@ import {
   UserCheck, Plus, MessageCircle, ArrowRight,
   X, Check, Trash2, Phone, Mail, DollarSign, FileText, RefreshCw, Loader2
 } from "lucide-react";
+import WhatsAppIcon from '../../../components/icons/WhatsAppIcon';
 import { useAuth } from "../../../context/AuthContext";
 import { supabase, isSupabaseConfigured } from "../../../lib/supabaseClient";
 
@@ -386,7 +387,7 @@ export default function LeadsModule() {
                               className="p-1.5 rounded-lg bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 transition-colors"
                               title="Chamar no WhatsApp"
                             >
-                              <MessageCircle className="w-3.5 h-3.5" />
+                              <WhatsAppIcon className="w-3.5 h-3.5 text-green-400" />
                             </a>
                           )}
                           {nextStage && (

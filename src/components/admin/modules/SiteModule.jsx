@@ -26,10 +26,16 @@ export default function SiteModule() {
     statusEventos: 'Ativo • Destaque 3',
   });
 
+  const [isSaving, setIsSaving] = useState(false);
+
   const handleSave = (e) => {
     e.preventDefault();
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 3000);
+    setIsSaving(true);
+    setTimeout(() => {
+      setIsSaving(false);
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 3500);
+    }, 1200);
   };
 
   return (
@@ -63,9 +69,14 @@ export default function SiteModule() {
 
       {/* Success Notification */}
       {savedSuccess && (
-        <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-3 animate-fade-in">
-          <Check className="w-4 h-4 text-emerald-400" />
-          <span>Configurações salvas com sucesso! As alterações serão sincronizadas com o banco Supabase e o site oficial.</span>
+        <div className="p-4 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-sm font-bold flex items-center gap-3 shadow-lg shadow-emerald-500/10">
+          <div className="w-7 h-7 rounded-full bg-emerald-500/30 flex items-center justify-center flex-shrink-0">
+            <Check className="w-4 h-4 text-emerald-400" />
+          </div>
+          <div>
+            <p className="font-bold text-emerald-200">✓ Salvo com Sucesso!</p>
+            <p className="text-xs text-emerald-400 font-normal mt-0.5">As alterações foram aplicadas e serão sincronizadas com o site oficial.</p>
+          </div>
         </div>
       )}
 
@@ -248,10 +259,20 @@ export default function SiteModule() {
 
             <button
               type="submit"
-              className="w-full py-3 px-4 rounded-xl bg-gold-gradient text-dark-950 font-bold text-xs uppercase tracking-wider hover:brightness-110 shadow-lg shadow-gold/20 flex items-center justify-center gap-2 transition-all"
+              disabled={isSaving}
+              className="w-full py-3 px-4 rounded-xl bg-gold-gradient text-dark-950 font-bold text-xs uppercase tracking-wider hover:brightness-110 shadow-lg shadow-gold/20 flex items-center justify-center gap-2 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              <Save className="w-4 h-4" />
-              <span>Salvar Alterações</span>
+              {isSaving ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Salvando...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>Salvar Alterações</span>
+                </>
+              )}
             </button>
 
             {!isSuperAdmin && (

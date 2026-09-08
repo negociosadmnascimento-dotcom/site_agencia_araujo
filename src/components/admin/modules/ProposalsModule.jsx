@@ -3,6 +3,7 @@ import {
   FileText, Plus, Search, Filter, MessageCircle, Copy, Check, 
   ExternalLink, DollarSign, Calendar, Clock, ShieldCheck, X 
 } from 'lucide-react';
+import WhatsAppIcon from '../../../components/icons/WhatsAppIcon';
 import { useAuth } from '../../../context/AuthContext';
 
 export default function ProposalsModule() {
@@ -239,7 +240,7 @@ export default function ProposalsModule() {
                   className="p-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 transition-colors"
                   title="Enviar Link no WhatsApp do Cliente"
                 >
-                  <MessageCircle className="w-4 h-4" />
+                  <WhatsAppIcon className="w-4 h-4 text-green-400" />
                 </a>
               </div>
             </div>

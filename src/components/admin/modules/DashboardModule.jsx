@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Eye, Users, MessageCircle, Instagram, Calendar, 
+  Eye, Users, Instagram, Calendar, 
   ArrowUpRight, Plus, Clock, FileText, CheckCircle2, 
   Camera, Sparkles, ChevronRight, Phone
 } from 'lucide-react';
+import WhatsAppIcon from '../../../components/icons/WhatsAppIcon';
 import { useAuth } from '../../../context/AuthContext';
 
 export default function DashboardModule({ onNavigate }) {
@@ -50,7 +51,7 @@ export default function DashboardModule({ onNavigate }) {
       title: 'Cliques WhatsApp',
       value: '27',
       change: 'Conversão direta 62%',
-      icon: MessageCircle,
+      icon: WhatsAppIcon,
       target: 'WhatsApp',
       linkText: 'Ver Conversas',
     },
@@ -262,7 +263,7 @@ export default function DashboardModule({ onNavigate }) {
                     title="Chamar no WhatsApp"
                     className="p-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-colors"
                   >
-                    <MessageCircle className="w-4 h-4" />
+                    <WhatsAppIcon className="w-4 h-4 text-green-400" />
                   </a>
                 </div>
               </div>
@@ -318,7 +319,7 @@ export default function DashboardModule({ onNavigate }) {
                     className="p-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-colors"
                     title="Atender via WhatsApp"
                   >
-                    <MessageCircle className="w-4 h-4" />
+                    <WhatsAppIcon className="w-4 h-4 text-green-400" />
                   </a>
                 </div>
               </div>

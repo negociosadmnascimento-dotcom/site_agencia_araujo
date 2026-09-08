@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Image, Plus, Filter, Sparkles, Eye, Check, Star, 
-  ExternalLink, Layers, Camera, X 
+  ExternalLink, Layers, Camera, X, RefreshCw, Upload
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 
@@ -9,6 +9,9 @@ export default function PortfolioModule() {
   const { isSuperAdmin, logActivity } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedId, setSavedId] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
 
   const [portfolioItems, setPortfolioItems] = useState([
     {
@@ -85,21 +88,39 @@ export default function PortfolioModule() {
   const handleAddItem = (e) => {
     e.preventDefault();
     if (!newItem.title) return;
+    setIsSaving(true);
 
-    const item = {
-      id: `port_${Date.now()}`,
-      title: newItem.title,
-      category: newItem.category,
-      image: newItem.image || '/images/instagram/maracana-full.png',
-      featured: false,
-      featuredText: 'Galeria',
-      views: '0 visualizações',
-      date: 'Hoje',
-    };
+    setTimeout(() => {
+      const item = {
+        id: `port_${Date.now()}`,
+        title: newItem.title,
+        category: newItem.category,
+        image: newItem.image || '/images/instagram/maracana-full.png',
+        featured: false,
+        featuredText: 'Galeria',
+        views: '0 visualizações',
+        date: 'Hoje',
+      };
 
-    setPortfolioItems([item, ...portfolioItems]);
-    logActivity('PORTFOLIO_ITEM_ADD', 'portfolio', `Adicionou nova foto ao portfólio: "${item.title}"`);
-    setShowAddModal(false);
+      setPortfolioItems(prev => [item, ...prev]);
+      logActivity('PORTFOLIO_ITEM_ADD', 'portfolio', `Adicionou nova foto ao portfólio: "${item.title}"`);
+      setIsSaving(false);
+      setSavedId(item.id);
+      setTimeout(() => {
+        setSavedId(null);
+        setShowAddModal(false);
+        setNewItem({ title: '', category: 'Retratos Pessoais', image: '' });
+        setImagePreview('');
+      }, 1800);
+    }, 1000);
+  };
+
+  const handleImagePick = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const objectUrl = URL.createObjectURL(file);
+    setImagePreview(objectUrl);
+    setNewItem(prev => ({ ...prev, image: objectUrl }));
   };
 
   const filtered = portfolioItems.filter(p => selectedCategory === 'Todos' || p.category === selectedCategory);
@@ -257,29 +278,64 @@ export default function PortfolioModule() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Caminho da Imagem ou URL</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Imagem da Produção</label>
+                {/* File picker trigger */}
+                <label
+                  htmlFor="portfolio-image-picker"
+                  className="flex items-center gap-2 cursor-pointer w-full px-4 py-3 rounded-xl bg-black/50 border border-dashed border-slate-600 hover:border-gold/50 text-slate-400 hover:text-gold text-xs transition-all"
+                >
+                  <Upload className="w-4 h-4" />
+                  <span>{imagePreview ? 'Alterar imagem selecionada' : 'Clique para selecionar foto do seu computador'}</span>
+                </label>
+                <input
+                  id="portfolio-image-picker"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImagePick}
+                  className="sr-only"
+                />
+                {/* URL fallback input */}
                 <input
                   type="text"
                   value={newItem.image}
-                  onChange={(e) => setNewItem({ ...newItem, image: e.target.value })}
-                  placeholder="/images/instagram/... ou URL externa"
-                  className="w-full px-4 py-2.5 rounded-xl bg-black/50 border border-slate-700 text-white text-sm focus:border-gold focus:outline-none font-mono"
+                  onChange={(e) => { setNewItem({ ...newItem, image: e.target.value }); setImagePreview(''); }}
+                  placeholder="ou cole URL externa: https://..."
+                  className="mt-2 w-full px-4 py-2.5 rounded-xl bg-black/50 border border-slate-700 text-white text-xs focus:border-gold focus:outline-none font-mono"
                 />
+                {/* Preview */}
+                {imagePreview && (
+                  <div className="mt-3 rounded-xl overflow-hidden border border-white/10 h-40">
+                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                  </div>
+                )}
               </div>
 
               <div className="pt-2 flex items-center justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(false)}
+                  onClick={() => { setShowAddModal(false); setImagePreview(''); }}
                   className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-slate-300"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-gold-gradient text-dark-950 font-bold text-xs uppercase tracking-wider hover:brightness-110 shadow-lg shadow-gold/20"
+                  disabled={isSaving}
+                  className="px-5 py-2.5 rounded-xl bg-gold-gradient text-dark-950 font-bold text-xs uppercase tracking-wider hover:brightness-110 shadow-lg shadow-gold/20 flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  Adicionar ao Portfólio
+                  {isSaving ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Adicionando...</span>
+                    </>
+                  ) : savedId ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Adicionado!</span>
+                    </>
+                  ) : (
+                    <span>Adicionar ao Portfólio</span>
+                  )}
                 </button>
               </div>
             </form>

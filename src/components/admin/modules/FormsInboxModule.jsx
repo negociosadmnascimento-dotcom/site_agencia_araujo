@@ -3,6 +3,7 @@ import {
   Inbox, Mail, MessageCircle, CheckCircle2, UserPlus, 
   Trash2, ShieldCheck, Search, RefreshCw 
 } from 'lucide-react';
+import WhatsAppIcon from '../../../components/icons/WhatsAppIcon';
 import { useAuth } from '../../../context/AuthContext';
 
 const STORAGE_KEY = 'site_form_submissions';
@@ -270,7 +271,7 @@ export default function FormsInboxModule({ onNavigate }) {
                   rel="noopener noreferrer"
                   className="px-3.5 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-semibold flex items-center gap-1.5 transition-colors"
                 >
-                  <MessageCircle className="w-3.5 h-3.5" />
+                  <WhatsAppIcon className="w-3.5 h-3.5 text-green-400" />
                   <span>WhatsApp</span>
                 </a>
 
