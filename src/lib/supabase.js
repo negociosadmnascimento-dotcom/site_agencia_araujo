@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 // Project details from user request
 export const SUPABASE_PROJECT_ID = 'zzoujggbomtcpobcyhyt';
 export const SUPABASE_PROJECT_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co`;
+export const SUPABASE_URL = SUPABASE_PROJECT_URL;
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || SUPABASE_PROJECT_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';

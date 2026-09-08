@@ -10,30 +10,31 @@ import QuoteForm from './components/QuoteForm';
 import WhatsAppFloat from './components/WhatsAppFloat';
 import Footer from './components/Footer';
 
-// Admin Components
+// Admin & Super Admin Components
 import LoginView from './components/admin/LoginView';
 import AdminLayout from './components/admin/AdminLayout';
+import SuperAdminLayout from './components/superadmin/SuperAdminLayout';
 import { useAuth } from './context/AuthContext';
 
 export default function App() {
-  const { isAuthenticated, isSuperAdmin, loginAs } = useAuth();
+  const { isAuthenticated, isSuperAdmin } = useAuth();
   
-  // Determine initial view from URL path
+  // Determine view based strictly on URL path
   const getInitialView = () => {
     const path = window.location.pathname.toLowerCase();
     const hash = window.location.hash.toLowerCase();
 
-    // 1. Dedicated Super Admin Secret Path
+    // Dedicated Super Admin Secret Path
     if (path.startsWith('/super-admin') || path.startsWith('/superadmin') || hash === '#super-admin') {
       return 'super_admin';
     }
 
-    // 2. Dedicated Admin Operador Secret Path
+    // Dedicated Admin Operador Secret Path
     if (path.startsWith('/admin') || path.startsWith('/gestao-admin') || hash === '#admin') {
       return 'admin';
     }
 
-    // 3. Default: 100% Public Site (no admin traces)
+    // Default: 100% Public Site (no buttons or badges)
     return 'site';
   };
 
@@ -63,15 +64,15 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // 1. RENDER SUPER ADMIN VIEW (SEPARATE LINK: /super-admin)
+  // 1. SUPER ADMIN PORTAL (ISOLATED AT /super-admin)
   if (currentView === 'super_admin') {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !isSuperAdmin) {
       return <LoginView portalMode="super_admin" onBackToSite={() => navigateTo('site')} />;
     }
-    return <AdminLayout onBackToSite={() => navigateTo('site')} />;
+    return <SuperAdminLayout onBackToSite={() => navigateTo('site')} />;
   }
 
-  // 2. RENDER ADMIN VIEW (SEPARATE LINK: /admin)
+  // 2. ADMIN OPERACIONAL PORTAL (ISOLATED AT /admin)
   if (currentView === 'admin') {
     if (!isAuthenticated) {
       return <LoginView portalMode="admin" onBackToSite={() => navigateTo('site')} />;
@@ -79,7 +80,7 @@ export default function App() {
     return <AdminLayout onBackToSite={() => navigateTo('site')} />;
   }
 
-  // 3. RENDER 100% PUBLIC SITE (COMPLETELY CLEAN - ZERO ADMIN BUTTONS/BADGES)
+  // 3. 100% PUBLIC SITE (COMPLETELY CLEAN - ZERO ADMIN TRACES)
   return (
     <div className="min-h-screen bg-[#FAF9F6] dark:bg-dark-950 text-slate-900 dark:text-slate-100 flex flex-col selection:bg-gold-500 selection:text-black transition-colors duration-300">
       {/* Header Navigation */}

@@ -2,13 +2,12 @@ import React, { useState } from 'react';
 import { 
   LayoutDashboard, Globe, Users, UserCheck, Calendar, FileText, 
   History, MessageSquareQuote, Image, Inbox, MessageCircle, 
-  CreditCard, FileCheck, Shield, LogOut, ExternalLink, Menu, 
-  X, Database, ChevronRight, Sparkles, User, KeyRound, Lock, Eye
+  CreditCard, FileCheck, LogOut, ExternalLink, Menu, 
+  X, ChevronRight, Sparkles, User, Palette, Eye
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { isSupabaseConfigured, SUPABASE_PROJECT_ID } from '../../lib/supabase';
 
-// Module Components
+// Module Components for the Admin
 import DashboardModule from './modules/DashboardModule';
 import SiteModule from './modules/SiteModule';
 import ClientsModule from './modules/ClientsModule';
@@ -22,13 +21,14 @@ import FormsInboxModule from './modules/FormsInboxModule';
 import WhatsAppModule from './modules/WhatsAppModule';
 import PaymentsModule from './modules/PaymentsModule';
 import ContractsModule from './modules/ContractsModule';
+import CustomizationModule from './modules/CustomizationModule';
 
 export default function AdminLayout({ onBackToSite }) {
-  const { user, isSuperAdmin, logout, loginAs } = useAuth();
+  const { user, logout } = useAuth();
   const [activeModule, setActiveModule] = useState('Dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // The 13 requested modules
+  // The modules of the Admin (Operational Agency)
   const navigationGroups = [
     {
       group: 'Visão Geral',
@@ -49,13 +49,7 @@ export default function AdminLayout({ onBackToSite }) {
     {
       group: 'Operacional & Conteúdo',
       items: [
-        { 
-          id: 'histórico', 
-          label: 'Histórico', 
-          icon: History, 
-          badge: isSuperAdmin ? 'Auditoria' : null,
-          badgeColor: 'bg-gold/20 text-gold-300 border-gold/30'
-        },
+        { id: 'histórico', label: 'Histórico Operacional', icon: History },
         { id: 'depoimentos', label: 'Depoimentos', icon: MessageSquareQuote },
         { id: 'portfólio', label: 'Portfólio', icon: Image },
         { 
@@ -77,24 +71,17 @@ export default function AdminLayout({ onBackToSite }) {
     {
       group: 'Financeiro & Jurídico',
       items: [
-        { 
-          id: 'pagamentos', 
-          label: 'Pagamentos', 
-          icon: CreditCard,
-          superOnly: true
-        },
+        { id: 'pagamentos', label: 'Pagamentos', icon: CreditCard },
         { id: 'contratos', label: 'Contratos', icon: FileCheck },
+      ]
+    },
+    {
+      group: 'Identidade da Agência',
+      items: [
+        { id: 'personalizacao', label: 'Personalização', icon: Palette },
       ]
     }
   ];
-
-  const handleToggleRole = () => {
-    if (isSuperAdmin) {
-      loginAs('admin');
-    } else {
-      loginAs('super_admin');
-    }
-  };
 
   const renderCurrentModule = () => {
     switch (activeModule) {
@@ -124,6 +111,8 @@ export default function AdminLayout({ onBackToSite }) {
         return <PaymentsModule />;
       case 'contratos':
         return <ContractsModule />;
+      case 'personalizacao':
+        return <CustomizationModule />;
       default:
         return <DashboardModule onNavigate={(mod) => setActiveModule(mod)} />;
     }
@@ -140,7 +129,7 @@ export default function AdminLayout({ onBackToSite }) {
         />
       )}
 
-      {/* SIDEBAR */}
+      {/* SIDEBAR (100% OPERATIONAL - NO SUPER ADMIN CLUES, NO DATABASE PILLS) */}
       <aside className={`
         fixed lg:sticky top-0 left-0 h-screen w-72 bg-gradient-to-b from-slate-900 via-[#0A0E17] to-black 
         border-r border-gold/20 flex flex-col justify-between z-50 transition-transform duration-300 ease-in-out
@@ -160,7 +149,7 @@ export default function AdminLayout({ onBackToSite }) {
                   AGÊNCIAS ARAÚJO
                 </span>
                 <span className="text-[10px] font-mono uppercase tracking-widest text-gold-300">
-                  Painel de Gestão
+                  Painel da Agência
                 </span>
               </div>
             </div>
@@ -173,27 +162,21 @@ export default function AdminLayout({ onBackToSite }) {
             </button>
           </div>
 
-          {/* Active Role Indicator Badge */}
+          {/* Simple Operator Badge without toggle */}
           <div className="mt-4 p-2 rounded-xl bg-black/40 border border-white/10 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className={`w-2 h-2 rounded-full ${isSuperAdmin ? 'bg-gold animate-pulse' : 'bg-blue-400'}`} />
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
               <span className="text-xs font-bold text-white uppercase font-mono">
-                {isSuperAdmin ? 'Super Admin' : 'Admin Operador'}
+                Ambiente de Gestão Ativo
               </span>
             </div>
-
-            {/* Quick Role Switch Toggle (Useful for testing permissions) */}
-            <button
-              onClick={handleToggleRole}
-              title="Alternar entre Super Admin e Admin para testar permissões"
-              className="text-[10px] font-mono text-gold hover:text-gold-light underline bg-gold/10 px-2 py-0.5 rounded"
-            >
-              Alternar
-            </button>
+            <span className="text-[10px] font-mono text-slate-400 bg-white/5 px-2 py-0.5 rounded">
+              Operador
+            </span>
           </div>
         </div>
 
-        {/* Navigation Items (The 13 Modules) */}
+        {/* Navigation Items */}
         <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6 scrollbar-thin scrollbar-thumb-white/10">
           {navigationGroups.map((group, gIdx) => (
             <div key={gIdx} className="space-y-1">
@@ -223,18 +206,13 @@ export default function AdminLayout({ onBackToSite }) {
                       <span className="capitalize">{item.label}</span>
                     </div>
 
-                    <div className="flex items-center gap-1.5">
-                      {item.badge && (
-                        <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded border ${
-                          isActive ? 'bg-black/20 text-dark-950 border-black/30' : item.badgeColor
-                        }`}>
-                          {item.badge}
-                        </span>
-                      )}
-                      {item.superOnly && !isSuperAdmin && (
-                        <Lock className="w-3 h-3 text-slate-400" />
-                      )}
-                    </div>
+                    {item.badge && (
+                      <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded border ${
+                        isActive ? 'bg-black/20 text-dark-950 border-black/30' : item.badgeColor
+                      }`}>
+                        {item.badge}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -242,24 +220,10 @@ export default function AdminLayout({ onBackToSite }) {
           ))}
         </div>
 
-        {/* Bottom Sidebar: Supabase status & Profile */}
+        {/* Bottom Sidebar: Profile & View Site */}
         <div className="p-4 border-t border-white/5 space-y-3 bg-black/40">
-          
-          {/* Supabase Status Pill */}
-          <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-[11px] font-mono flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Database className="w-3.5 h-3.5 text-gold" />
-              <span className="text-slate-300">Supabase</span>
-            </div>
-            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
-              isSupabaseConfigured ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'
-            }`}>
-              {isSupabaseConfigured ? 'Conectado' : 'Aguardando'}
-            </span>
-          </div>
-
           {/* User info */}
-          <div className="flex items-center justify-between pt-1">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5 min-w-0">
               <img
                 src={user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
@@ -267,7 +231,7 @@ export default function AdminLayout({ onBackToSite }) {
                 className="w-8 h-8 rounded-full object-cover border border-gold/40"
               />
               <div className="min-w-0">
-                <span className="text-xs font-bold text-white block truncate">{user?.name}</span>
+                <span className="text-xs font-bold text-white block truncate">{user?.name || 'Operador'}</span>
                 <span className="text-[10px] text-slate-400 block truncate">{user?.email}</span>
               </div>
             </div>
@@ -313,16 +277,6 @@ export default function AdminLayout({ onBackToSite }) {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Role quick indicator */}
-            <span className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold ${
-              isSuperAdmin 
-                ? 'bg-gold/15 text-gold-300 border border-gold/30' 
-                : 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
-            }`}>
-              <Shield className="w-3.5 h-3.5" />
-              <span>{isSuperAdmin ? 'Super Admin' : 'Admin Operador'}</span>
-            </span>
-
             <button
               onClick={onBackToSite}
               className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-white flex items-center gap-1.5 transition-colors"
