@@ -237,8 +237,8 @@ export default function SuperAdminLayout({ onBackToSite }) {
                 }}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
                   isActive
-                    ? 'bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-600/30'
-                    : 'text-slate-300 hover:text-white hover:bg-white/5'
+                    ? 'bg-white/[0.08] text-white font-semibold border-l-2 border-indigo-500 pl-3.5 shadow-sm'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
                 }`}
               >
                 <div className="flex items-center gap-3">

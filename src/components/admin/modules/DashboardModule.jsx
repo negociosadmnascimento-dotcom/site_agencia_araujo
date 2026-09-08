@@ -35,36 +35,32 @@ export default function DashboardModule({ onNavigate }) {
       value: '1.248',
       change: '+24% este mês',
       icon: Eye,
-      color: 'from-amber-500/20 to-gold/10 border-gold/30 text-gold',
+      target: 'site',
       linkText: 'Ver Tráfego',
-      target: 'site'
     },
     {
       title: 'Leads Captados',
       value: String(leadCount),
       change: '+8 novos esta semana',
       icon: Users,
-      color: 'from-blue-500/20 to-cyan-500/10 border-blue-500/30 text-blue-400',
+      target: 'leads',
       linkText: 'Abrir CRM',
-      target: 'leads'
     },
     {
       title: 'Cliques WhatsApp',
       value: '27',
       change: 'Conversão direta 62%',
       icon: MessageCircle,
-      color: 'from-emerald-500/20 to-teal-500/10 border-emerald-500/30 text-emerald-400',
+      target: 'WhatsApp',
       linkText: 'Ver Conversas',
-      target: 'WhatsApp'
     },
     {
       title: 'Cliques Instagram',
       value: '18',
       change: '@agenciasaraujo',
       icon: Instagram,
-      color: 'from-pink-500/20 to-purple-500/10 border-pink-500/30 text-pink-400',
+      target: 'portfólio',
       linkText: 'Ver Portfólio',
-      target: 'portfólio'
     },
   ];
 
@@ -133,8 +129,8 @@ export default function DashboardModule({ onNavigate }) {
   return (
     <div className="space-y-8">
       {/* Welcome Banner */}
-      <div className="rounded-3xl bg-gradient-to-r from-slate-900 via-[#10141E] to-slate-900 border border-gold/30 p-6 sm:p-8 relative overflow-hidden shadow-2xl">
-        <div className="absolute -right-16 -top-16 w-64 h-64 bg-gold/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="rounded-3xl bg-[#0C101A] border border-white/[0.08] p-6 sm:p-7 relative rounded-2xl shadow-lg">
+        
         
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div>
@@ -178,36 +174,37 @@ export default function DashboardModule({ onNavigate }) {
           <span className="text-[11px] font-mono text-gold-300">Tempo Real</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           {overviewStats.map((item, idx) => {
             const Icon = item.icon;
             return (
               <div
                 key={idx}
                 onClick={() => onNavigate?.(item.target)}
-                className={`cursor-pointer rounded-2xl bg-gradient-to-b ${item.color} bg-slate-900/80 backdrop-blur-xl border p-5 relative overflow-hidden transition-all hover:translate-y-[-2px] hover:border-gold/60`}
+                className="group cursor-pointer rounded-2xl bg-[#0B0F19] hover:bg-[#0E1422] border border-white/[0.08] hover:border-[#D4AF37]/40 p-5 relative transition-all duration-200 shadow-md hover:shadow-xl"
               >
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 group-hover:text-slate-300 transition-colors">
                     {item.title}
                   </span>
-                  <div className="p-2 rounded-xl bg-black/40">
+                  <div className="w-8 h-8 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-300 group-hover:text-[#D4AF37] transition-colors">
                     <Icon className="w-4 h-4" />
                   </div>
                 </div>
 
                 <div className="flex items-baseline justify-between">
-                  <span className="text-3xl font-serif font-bold text-white tracking-wide">
+                  <span className="text-3xl font-serif font-bold text-white tracking-tight">
                     {item.value}
                   </span>
-                  <span className="text-[11px] text-slate-400 flex items-center gap-1 group-hover:text-gold">
+                  <span className="text-[11px] text-slate-400 flex items-center gap-1 group-hover:text-[#D4AF37] transition-colors">
                     <span>{item.linkText}</span>
                     <ArrowUpRight className="w-3 h-3" />
                   </span>
                 </div>
 
-                <div className="mt-3 text-xs text-slate-400 font-medium">
-                  {item.change}
+                <div className="mt-2 text-xs text-slate-400 font-medium flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/80" />
+                  <span>{item.change}</span>
                 </div>
               </div>
             );

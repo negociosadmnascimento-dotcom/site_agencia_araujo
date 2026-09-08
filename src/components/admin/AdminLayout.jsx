@@ -153,14 +153,14 @@ export default function AdminLayout({ onBackToSite }) {
           </div>
 
           {/* Business Status Pill */}
-          <div className="mt-4 p-2.5 rounded-xl bg-black/50 border border-gold/20 flex items-center justify-between">
+          <div className="mt-4 p-2.5 rounded-xl bg-black/40 border border-white/[0.08] flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-xs font-bold text-white font-serif">
                 Agência Ativa
               </span>
             </div>
-            <span className="text-[10px] font-mono text-gold-300 bg-gold/10 px-2 py-0.5 rounded border border-gold/30">
+            <span className="text-[10px] font-mono text-slate-300 bg-white/[0.05] px-2 py-0.5 rounded border border-white/10">
               Plano Pro
             </span>
           </div>
@@ -185,21 +185,19 @@ export default function AdminLayout({ onBackToSite }) {
                       setActiveModule(item.id);
                       setMobileMenuOpen(false);
                     }}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all duration-150 ${
                       isActive
-                        ? 'bg-gold-gradient text-dark-950 font-bold shadow-lg shadow-gold/20'
-                        : 'text-slate-300 hover:text-white hover:bg-white/5'
+                        ? 'bg-white/[0.08] text-white font-semibold border-l-2 border-[#D4AF37] pl-3.5 shadow-sm'
+                        : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <Icon className={`w-4 h-4 ${isActive ? 'text-dark-950' : 'text-gold'}`} />
+                      <Icon className={`w-4 h-4 ${isActive ? 'text-[#D4AF37]' : 'text-slate-400'}`} />
                       <span>{item.label}</span>
                     </div>
 
                     {item.badge && (
-                      <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded border ${
-                        isActive ? 'bg-black/20 text-dark-950 border-black/30' : item.badgeColor
-                      }`}>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white/[0.05] border border-white/10 text-slate-300">
                         {item.badge}
                       </span>
                     )}

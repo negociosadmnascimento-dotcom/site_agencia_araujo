@@ -64,7 +64,48 @@ export default function QuoteForm() {
     setTimeout(() => {
       setIsSubmitting(false);
       setSubmitted(true);
-      
+
+      // Persistência no banco local do SaaS (conectado ao painel Admin)
+      try {
+        const formattedDate = new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+        
+        // 1. Envia para a Caixa de Entrada de Formulários (FormsInboxModule)
+        const existingForms = JSON.parse(localStorage.getItem('site_form_submissions') || '[]');
+        const newFormEntry = {
+          id: 'sub_' + Date.now(),
+          name: formData.name,
+          email: formData.email || '',
+          phone: formData.phone,
+          service: formData.service,
+          eventDate: formData.date || 'A combinar',
+          message: formData.message,
+          createdAt: formattedDate,
+          read: false,
+          source: 'Formulário do Site',
+        };
+        existingForms.unshift(newFormEntry);
+        localStorage.setItem('site_form_submissions', JSON.stringify(existingForms));
+
+        // 2. Envia para o Funil de Vendas de Leads (LeadsModule)
+        const existingLeads = JSON.parse(localStorage.getItem('admin_leads') || '[]');
+        const newLeadEntry = {
+          id: 'lead_' + Date.now(),
+          name: formData.name,
+          service: formData.service,
+          phone: formData.phone,
+          email: formData.email || '',
+          source: 'Formulário do Site (Orçamento)',
+          estimatedValue: 'A definir',
+          stage: 'novo',
+          date: formattedDate,
+          notes: `[Orçamento]: ${formData.message} | Data solicitada: ${formData.date || 'A combinar'}`,
+        };
+        existingLeads.unshift(newLeadEntry);
+        localStorage.setItem('admin_leads', JSON.stringify(existingLeads));
+      } catch (err) {
+        console.error('Erro ao registrar formulário no admin:', err);
+      }
+
       // Open WhatsApp automatically in a new tab
       window.open(whatsappUrl, '_blank');
     }, 600);

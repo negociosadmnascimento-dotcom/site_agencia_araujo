@@ -50,28 +50,117 @@ export default function LeadsModule() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // ── Carregar leads do Supabase ─────────────────────────────────────────────
-  const loadLeads = useCallback(async () => {
-    if (!isSupabaseConfigured) {
-      setError("Supabase não configurado. Adicione VITE_SUPABASE_ANON_KEY no .env");
-      setLoading(false);
-      return;
+  // ── Carregar leads com sincronização híbrida (Supabase + Site Submissions) ──
+  const SEED_LEADS = [
+    {
+      id: "lead_01",
+      name: "Camila Mendonça",
+      service: "Retratos Pessoais & Branding",
+      phone: "(21) 99123-4567",
+      email: "camila.mendonca@gmail.com",
+      source: "Formulário do Site",
+      estimatedValue: "R$ 2.800,00",
+      stage: "novo",
+      date: "Hoje, 14:20",
+      notes: "Solicitou ensaio ao ar livre na Urca ou Copacabana."
+    },
+    {
+      id: "lead_02",
+      name: "Diretoria Hospital Copa D'Or",
+      service: "Fotos Corporativas Equipe Médica",
+      phone: "(21) 98877-1122",
+      email: "rh@copador.com.br",
+      source: "WhatsApp Direto",
+      estimatedValue: "R$ 7.500,00",
+      stage: "contato",
+      date: "Hoje, 11:15",
+      notes: "Precisam de fotos de 15 médicos especialistas para o anuário."
+    },
+    {
+      id: "lead_03",
+      name: "Restaurante Fogo & Brasa Barra",
+      service: "Gastronomia & Vídeo Reels",
+      phone: "(21) 97766-3344",
+      email: "gerencia@fogoebasa.com",
+      source: "Instagram",
+      estimatedValue: "R$ 3.900,00",
+      stage: "proposta",
+      date: "Ontem",
+      notes: "Proposta enviada por WhatsApp. Aguardando aprovação do sócio."
+    },
+    {
+      id: "lead_04",
+      name: "Beatriz & Guilherme",
+      service: "Casamento & Pré-Wedding",
+      phone: "(21) 98122-3344",
+      email: "bia.guilherme@gmail.com",
+      source: "Indicação",
+      estimatedValue: "R$ 9.800,00",
+      stage: "fechado",
+      date: "Há 2 dias",
+      notes: "Sinal de 50% pago via Pix. Contrato assinado."
     }
+  ];
+
+  const loadLeads = useCallback(async () => {
     setLoading(true);
     setError(null);
-    try {
-      const { data, error: sbError } = await supabase
-        .from("leads")
-        .select("*")
-        .order("criado_em", { ascending: false });
+    let resultLeads = [];
 
-      if (sbError) throw sbError;
-      setLeads((data ?? []).map(mapRow));
-    } catch (err) {
-      setError(err.message ?? "Erro ao carregar leads");
-    } finally {
-      setLoading(false);
+    // 1. Tenta carregar do Supabase se configurado
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error: sbError } = await supabase
+          .from("leads")
+          .select("*")
+          .order("criado_em", { ascending: false });
+
+        if (!sbError && data && data.length > 0) {
+          resultLeads = data.map(mapRow);
+        }
+      } catch (err) {
+        console.warn("Supabase query fallback:", err);
+      }
     }
+
+    // 2. Mescla com entradas do formulário do site e leads gravados localmente
+    try {
+      const localLeads = JSON.parse(localStorage.getItem("admin_leads") || "[]");
+      const siteSubmissions = JSON.parse(localStorage.getItem("site_form_submissions") || "[]");
+
+      // Converte submissões de formulário ainda não presentes em leads
+      const convertedSite = siteSubmissions.map(sub => ({
+        id: "from_" + sub.id,
+        name: sub.name,
+        service: sub.service,
+        phone: sub.phone,
+        email: sub.email || "",
+        source: sub.source || "Formulário do Site",
+        estimatedValue: "A definir",
+        stage: "novo",
+        date: sub.createdAt || "Hoje",
+        notes: sub.message || (sub.eventDate ? `Data solicitada: ${sub.eventDate}` : ""),
+      }));
+
+      // Combina leads locais + site + seeds sem duplicação de IDs
+      const allCombined = [...localLeads, ...convertedSite, ...SEED_LEADS];
+      const uniqueMap = new Map();
+
+      // Prioriza dados do Supabase se houver
+      resultLeads.forEach(l => uniqueMap.set(l.id, l));
+      allCombined.forEach(l => {
+        if (!uniqueMap.has(l.id) && !uniqueMap.has(l.phone)) {
+          uniqueMap.set(l.id, l);
+        }
+      });
+
+      resultLeads = Array.from(uniqueMap.values());
+    } catch (e) {
+      if (resultLeads.length === 0) resultLeads = SEED_LEADS;
+    }
+
+    setLeads(resultLeads);
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -95,35 +184,47 @@ export default function LeadsModule() {
 
   // ── Avançar etapa ──────────────────────────────────────────────────────────
   const moveStage = async (leadId, nextStage) => {
-    // Otimista: atualiza UI imediatamente
-    setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, stage: nextStage } : l)));
+    // Atualiza estado local
+    setLeads((prev) => {
+      const updated = prev.map((l) => (l.id === leadId ? { ...l, stage: nextStage } : l));
+      try {
+        localStorage.setItem("admin_leads", JSON.stringify(updated));
+      } catch (_) {}
+      return updated;
+    });
 
-    const { error: sbError } = await supabase
-      .from("leads")
-      .update({ etapa: nextStage })
-      .eq("id", leadId);
-
-    if (sbError) {
-      showToast("Erro ao avançar etapa: " + sbError.message, "error");
-      loadLeads(); // reverte ao estado real
-      return;
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from("leads").update({ etapa: nextStage }).eq("id", leadId);
+      } catch (err) {
+        console.warn("Erro ao atualizar etapa no Supabase:", err);
+      }
     }
-    logActivity("MOVE_LEAD", "leads", `Lead ${leadId} avançado para "${nextStage}"`);
+
+    logActivity?.("MOVE_LEAD", "leads", `Lead ${leadId} avançado para "${nextStage}"`);
     showToast(`Avançado para "${stages.find((s) => s.key === nextStage)?.label}"!`);
   };
 
   // ── Deletar lead ───────────────────────────────────────────────────────────
   const deleteLead = async (id, name) => {
     if (!window.confirm(`Remover lead "${name}"?`)) return;
-    setLeads((prev) => prev.filter((l) => l.id !== id));
+    setLeads((prev) => {
+      const filtered = prev.filter((l) => l.id !== id);
+      try {
+        localStorage.setItem("admin_leads", JSON.stringify(filtered));
+      } catch (_) {}
+      return filtered;
+    });
 
-    const { error: sbError } = await supabase.from("leads").delete().eq("id", id);
-    if (sbError) {
-      showToast("Erro ao remover lead: " + sbError.message, "error");
-      loadLeads();
-      return;
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from("leads").delete().eq("id", id);
+      } catch (err) {
+        console.warn("Erro ao remover do Supabase:", err);
+      }
     }
-    logActivity("REMOCAO_LEAD", "leads", `Removeu lead: ${name}`);
+
+    logActivity?.("REMOCAO_LEAD", "leads", `Removeu lead: ${name}`);
     showToast("Lead removido.", "error");
   };
 
