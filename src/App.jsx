@@ -41,8 +41,47 @@ export default function App() {
 
   const [currentView, setCurrentView] = useState(getInitialView);
 
-  // Sync with browser history and popstate
+  // Sync with browser history and popstate, plus automatic one-time purge of legacy demo seeds
   useEffect(() => {
+    // 1. One-time purge of legacy demo entries from browser localStorage
+    try {
+      const PURGE_KEY = 'agencia_demo_purged_v2';
+      if (!localStorage.getItem(PURGE_KEY)) {
+        const DEMO_IDS = [
+          'lead_01', 'lead_02', 'lead_03', 'lead_04', 
+          'sample_01', 'sample_02', 
+          'sess_01', 'sess_02', 'sess_03', 'sess_04', 'sess_05', 
+          'pay_01', 'pay_02', 'pay_03', 'pay_04', 
+          'ctr_01', 'ctr_02', 'ctr_03', 
+          'cli_01', 'cli_02', 'cli_03', 'cli_04', 'cli_05'
+        ];
+        const DEMO_NAMES = [
+          'Camila Mendonça', "Diretoria Hospital Copa D'Or", 'Restaurante Fogo & Brasa Barra', 'Beatriz & Guilherme',
+          'Dr. Roberto Silveira', 'Mariana & Lucas Alencar', 'Le Vin Bistrô & Bar', 'SAFRA Produções Rio',
+          'Chef Rodrigo Guimarães'
+        ];
+
+        ['admin_leads', 'site_form_submissions', 'admin_sessions', 'admin_payments', 'admin_contracts', 'admin_clients'].forEach(key => {
+          try {
+            const items = JSON.parse(localStorage.getItem(key) || '[]');
+            if (Array.isArray(items)) {
+              const cleaned = items.filter(item => {
+                if (!item) return false;
+                if (DEMO_IDS.includes(item.id)) return false;
+                if (item.name && DEMO_NAMES.includes(item.name)) return false;
+                if (item.client && DEMO_NAMES.includes(item.client)) return false;
+                if (item.clientName && DEMO_NAMES.includes(item.clientName)) return false;
+                return true;
+              });
+              localStorage.setItem(key, JSON.stringify(cleaned));
+            }
+          } catch (_) {}
+        });
+        localStorage.setItem(PURGE_KEY, 'done');
+      }
+    } catch (_) {}
+
+    // 2. Handle popstate
     const handlePopState = () => {
       setCurrentView(getInitialView());
     };
