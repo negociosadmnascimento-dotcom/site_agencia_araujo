@@ -23,13 +23,13 @@ export default function PortfolioSection() {
     },
     {
       id: 1,
-      title: "Cobertura de Evento com a Gente",
+      title: "Equipe Oficial em Cobertura de Casamento",
       category: "retratos",
       categoryLabel: "Retratos Pessoais",
-      image: "/images/retrato-cobertura-equipe.jpg",
+      image: "/images/retrato-equipe-casamento.png",
       tag: "Equipe Oficial em Ação",
-      description: "Equipe Agências Araújo em ação para a cobertura completa e vibrante do seu evento no Rio de Janeiro, unindo simpatia, energia positiva e excelência técnica.",
-      details: "Equipe Oficial Agências Araújo • Luz Natural Externa • Direção Acolhedora",
+      description: "Equipe Agências Araújo em ação na cobertura fotográfica e audiovisual de casamento no Rio de Janeiro, unindo técnica de iluminação com flash dedicado, sintonia e excelência profissional.",
+      details: "Equipe Oficial Agências Araújo • Cobertura Fotográfica de Casamento • Iluminação e Flash Dedicado",
       isCover: false,
     },
     {

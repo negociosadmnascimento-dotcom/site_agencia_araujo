@@ -13,9 +13,9 @@ export default function PortfolioModule() {
   const [portfolioItems, setPortfolioItems] = useState([
     {
       id: 'port_01',
-      title: 'Cobertura em Grande Escala no Maracanã (Foto 3/3)',
+      title: 'Cobertura em Grande Escala no Maracanã (Foto 1/3)',
       category: 'Retratos Pessoais',
-      image: '/images/instagram/maracana-full.png',
+      image: '/images/retrato-maracana-estadio.jpg',
       featured: true,
       featuredText: 'Capa Principal Ativa',
       views: '1.420 visualizações',
@@ -23,9 +23,9 @@ export default function PortfolioModule() {
     },
     {
       id: 'port_02',
-      title: 'Ensaio Retrato Posicionamento Executive',
+      title: 'Equipe Oficial em Cobertura de Casamento (Foto 2/3)',
       category: 'Retratos Pessoais',
-      image: '/images/instagram/retratos-pessoais.png',
+      image: '/images/retrato-equipe-casamento.png',
       featured: false,
       featuredText: 'Galeria',
       views: '980 visualizações',
