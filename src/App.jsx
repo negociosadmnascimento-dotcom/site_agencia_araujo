@@ -23,20 +23,26 @@ export default function App() {
   
   // Determine initial view from URL path
   const getInitialView = () => {
+    const hostname = window.location.hostname.toLowerCase();
     const path = window.location.pathname.toLowerCase();
     const hash = window.location.hash.toLowerCase();
 
-    // 1. Dedicated Super Admin Path
+    // 1. Dedicated Super Admin Governance Domain (negocios.nascimento.com.br)
+    if (hostname.includes('nascimento.com.br') || hostname === 'negocios.nascimento.com.br') {
+      return 'super_admin';
+    }
+
+    // 2. Dedicated Super Admin Path
     if (path.startsWith('/super-admin') || path.startsWith('/superadmin') || hash === '#super-admin') {
       return 'super_admin';
     }
 
-    // 2. Dedicated Tenant Admin Path
+    // 3. Dedicated Tenant Admin Path
     if (path.startsWith('/admin') || path.startsWith('/gestao-admin') || hash === '#admin') {
       return 'admin';
     }
 
-    // 3. Default: 100% Public Site (no admin buttons or traces)
+    // 4. Default: 100% Public Site (no admin buttons or traces)
     return 'site';
   };
 

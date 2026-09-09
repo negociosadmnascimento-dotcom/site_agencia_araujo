@@ -4,15 +4,29 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 const AuthContext = createContext();
 
 // 1. BRANDING DA PLATAFORMA (SUPER ADMIN / SAAS CORE)
-// NÃO USA "Agência Araújo" - é a identidade do provedor SaaS
-export const PLATFORM_SETTINGS = {
+// NÃO USA "Agência Araújo" - é a identidade do provedor SaaS independente
+const DEFAULT_PLATFORM_SETTINGS = {
   name: 'NexCore SaaS Platform',
   tagline: 'Gestão Central de Tenants & Infraestrutura Multi-Empresa',
   logo: '/images/platform-emblem.svg',
   favicon: '/favicon.ico',
   primaryColor: '#6366F1', // Indigo / Platinum
   supportEmail: 'negociosadm.nascimento@gmail.com',
+  governanceDomain: 'negocios.nascimento.com.br',
+  operatorName: 'Direção Geral (Super Admin)',
 };
+
+export const getStoredPlatformSettings = () => {
+  try {
+    const saved = localStorage.getItem('saas_platform_config');
+    if (saved) {
+      return { ...DEFAULT_PLATFORM_SETTINGS, ...JSON.parse(saved) };
+    }
+  } catch (_) {}
+  return DEFAULT_PLATFORM_SETTINGS;
+};
+
+export const PLATFORM_SETTINGS = getStoredPlatformSettings();
 
 // 2. BRANDING DO CLIENTE / TENANT #001 (AGÊNCIA ARAÚJO)
 // Usado no site público e no /admin
@@ -113,6 +127,18 @@ const INITIAL_LOGS = [
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [platformConfig, setPlatformConfig] = useState(getStoredPlatformSettings);
+
+  const updatePlatformConfig = (newConfig) => {
+    const updated = { ...platformConfig, ...newConfig };
+    setPlatformConfig(updated);
+    try {
+      localStorage.setItem('saas_platform_config', JSON.stringify(updated));
+    } catch (_) {}
+    logActivity('UPDATE_PLATFORM_CONFIG', 'settings', `Identidade e parâmetros da plataforma atualizados: ${updated.name}`);
+    return updated;
+  };
+
   const [auditLogs, setAuditLogs] = useState(() => {
     try {
       const saved = localStorage.getItem('saas_platform_audit_logs');
@@ -346,6 +372,8 @@ export function AuthProvider({ children }) {
     isSuperAdmin: user?.role === 'super_admin' && user?.tenant_id === null,
     isTenantAdmin: user?.role === 'tenant_admin' && user?.tenant_id !== null,
     loading,
+    platformConfig,
+    updatePlatformConfig,
     auditLogs,
     logActivity,
     login,
