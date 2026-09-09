@@ -5,7 +5,8 @@ import {
   LifeBuoy, LogOut, ExternalLink, Menu, X, Database, ChevronRight, 
   Sparkles, CheckCircle2, AlertTriangle, Plus, Search, Filter, 
   Trash2, Edit3, Lock, Server, Cpu, RefreshCw, Eye, Check, Clock,
-  DollarSign, TrendingUp, ArrowUpRight, Palette, Building2, HelpCircle
+  DollarSign, TrendingUp, ArrowUpRight, Palette, Building2, HelpCircle,
+  Upload, Image as ImageIcon
 } from 'lucide-react';
 import { useAuth, PLATFORM_SETTINGS } from '../../context/AuthContext';
 import { isSupabaseConfigured, SUPABASE_PROJECT_ID } from '../../lib/supabase';
@@ -503,11 +504,22 @@ export default function SuperAdminLayout({ onBackToSite }) {
         <div className="p-6 pb-4 border-b border-indigo-900/30">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 p-0.5 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/20">
-                <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-                  <Shield className="w-5 h-5 text-indigo-400" />
+              {localConfig.logo ? (
+                <div className="w-10 h-10 rounded-2xl bg-white/10 border border-indigo-500/40 p-1 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/20 overflow-hidden">
+                  <img 
+                    src={localConfig.logo} 
+                    alt={localConfig.name} 
+                    className="max-w-full max-h-full object-contain" 
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
                 </div>
-              </div>
+              ) : (
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 p-0.5 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/20">
+                  <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
+                    <Shield className="w-5 h-5 text-indigo-400" />
+                  </div>
+                </div>
+              )}
               <div className="min-w-0">
                 <span className="text-sm font-bold tracking-wide text-white block truncate">
                   {localConfig.name}
@@ -630,6 +642,14 @@ export default function SuperAdminLayout({ onBackToSite }) {
             </button>
 
             <div className="flex items-center gap-2 text-xs text-slate-400">
+              {localConfig.logo && (
+                <img 
+                  src={localConfig.logo} 
+                  alt="" 
+                  className="w-5 h-5 object-contain rounded shrink-0" 
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
+              )}
               <span className="text-indigo-400 font-semibold">{localConfig.name}</span>
               <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
               <span className="text-white font-semibold">
@@ -1338,6 +1358,96 @@ export default function SuperAdminLayout({ onBackToSite }) {
                     <span>Identidade Visual do Super Admin</span>
                   </h3>
 
+                  {/* SEÇÃO LOGOTIPO DO SUPER ADMIN COM UPLOAD E URL */}
+                  <div className="p-4 sm:p-5 rounded-2xl bg-black/40 border border-indigo-900/60 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                        <ImageIcon className="w-4 h-4 text-indigo-400" />
+                        <span>Logotipo Oficial do Super Admin (White-Label)</span>
+                      </label>
+                      {localConfig.logo && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLocalConfig(prev => ({ ...prev, logo: '' }));
+                            showToast('Logotipo removido. Ícone padrão restaurado.');
+                          }}
+                          className="text-[11px] text-rose-400 hover:text-rose-300 flex items-center gap-1 transition-colors"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Remover Logo</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-center gap-5">
+                      {/* Logo Preview Box */}
+                      <div className="w-24 h-24 rounded-2xl bg-[#070A12] border-2 border-dashed border-indigo-500/40 p-2 flex items-center justify-center shrink-0 overflow-hidden relative shadow-inner">
+                        {localConfig.logo ? (
+                          <img
+                            src={localConfig.logo}
+                            alt="Logo Super Admin"
+                            className="max-w-full max-h-full object-contain"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center text-center p-1">
+                            <Shield className="w-8 h-8 text-indigo-400/80 mb-1" />
+                            <span className="text-[9px] text-slate-400 font-medium">Ícone Padrão</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Upload and URL input */}
+                      <div className="flex-1 w-full space-y-3">
+                        <div>
+                          <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-xs font-semibold text-indigo-200 cursor-pointer transition-all shadow-md active:scale-95">
+                            <Upload className="w-4 h-4 text-indigo-300" />
+                            <span>Fazer Upload de Imagem do Computador</span>
+                            <input
+                              type="file"
+                              accept="image/png, image/jpeg, image/svg+xml, image/webp"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  if (file.size > 3 * 1024 * 1024) {
+                                    showToast('A imagem excede o limite de 3MB.', 'error');
+                                    return;
+                                  }
+                                  const reader = new FileReader();
+                                  reader.onload = (evt) => {
+                                    if (evt.target?.result) {
+                                      setLocalConfig(prev => ({ ...prev, logo: evt.target.result }));
+                                      showToast('✓ Imagem do Logotipo carregada! Lembre-se de salvar.');
+                                    }
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }}
+                            />
+                          </label>
+                          <span className="text-[11px] text-slate-500 block sm:inline sm:ml-2 mt-1 sm:mt-0">
+                            PNG, SVG, JPG ou WebP (Máx: 3MB)
+                          </span>
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] text-slate-400 mb-1">
+                            Ou insira a URL direta da imagem (CDN / Nuvem):
+                          </label>
+                          <input
+                            type="text"
+                            value={localConfig.logo}
+                            onChange={e => setLocalConfig(prev => ({ ...prev, logo: e.target.value }))}
+                            placeholder="https://exemplo.com/sua-logo.png ou /images/..."
+                            className="w-full px-3.5 py-2 rounded-xl bg-black/60 border border-indigo-900/60 text-white text-xs font-mono focus:border-indigo-500 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
                       Nome Oficial da Plataforma *
@@ -1463,15 +1573,25 @@ export default function SuperAdminLayout({ onBackToSite }) {
 
                   <div className="p-4 rounded-2xl bg-[#0A0E1A] border border-indigo-500/40 space-y-4">
                     <div className="flex items-center gap-3">
-                      <div 
-                        className="w-10 h-10 rounded-2xl p-0.5 flex items-center justify-center shadow-lg"
-                        style={{ backgroundColor: localConfig.primaryColor }}
-                      >
-                        <Shield className="w-5 h-5 text-white" />
-                      </div>
+                      {localConfig.logo ? (
+                        <div className="w-12 h-12 rounded-2xl bg-white/10 border border-indigo-500/40 p-1 flex items-center justify-center shrink-0 shadow-lg overflow-hidden">
+                          <img 
+                            src={localConfig.logo} 
+                            alt={localConfig.name} 
+                            className="max-w-full max-h-full object-contain" 
+                          />
+                        </div>
+                      ) : (
+                        <div 
+                          className="w-12 h-12 rounded-2xl p-0.5 flex items-center justify-center shadow-lg"
+                          style={{ backgroundColor: localConfig.primaryColor }}
+                        >
+                          <Shield className="w-6 h-6 text-white" />
+                        </div>
+                      )}
                       <div>
-                        <span className="text-sm font-bold text-white block">{localConfig.name}</span>
-                        <span className="text-[10px] font-mono text-indigo-300 block">{localConfig.governanceDomain}</span>
+                        <span className="text-base font-bold text-white block">{localConfig.name}</span>
+                        <span className="text-xs font-mono text-indigo-300 block">{localConfig.governanceDomain}</span>
                       </div>
                     </div>
 
@@ -1678,6 +1798,34 @@ export default function SuperAdminLayout({ onBackToSite }) {
               )}
 
               <div className="rounded-2xl bg-slate-900/80 border border-indigo-900/30 p-6 sm:p-8 space-y-6 max-w-3xl shadow-xl">
+                {/* Destaque para Personalização & Logotipo */}
+                <div className="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    {localConfig.logo ? (
+                      <div className="w-10 h-10 rounded-xl bg-white/10 border border-indigo-500/30 p-1 flex items-center justify-center shrink-0 overflow-hidden">
+                        <img src={localConfig.logo} alt="Logo" className="max-w-full max-h-full object-contain" />
+                      </div>
+                    ) : (
+                      <div className="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
+                        <Palette className="w-5 h-5" />
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-sm font-bold text-white block">Logotipo & Identidade White-Label</span>
+                      <span className="text-xs text-slate-400">
+                        {localConfig.logo ? 'Logotipo personalizado ativo' : 'Usando emblema padrão da plataforma'}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('personalizacao')}
+                    className="px-3.5 py-1.5 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-xs font-semibold text-indigo-200 transition-colors shrink-0"
+                  >
+                    Gerenciar Logotipo & Marca
+                  </button>
+                </div>
+
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-300 mb-1.5">
                     Domínio Oficial do Super Admin

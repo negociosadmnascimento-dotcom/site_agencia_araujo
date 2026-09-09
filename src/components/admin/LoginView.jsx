@@ -3,8 +3,9 @@ import { Shield, Lock, Mail, ArrowRight, AlertCircle, ArrowLeft, KeyRound, Check
 import { useAuth, PLATFORM_SETTINGS, DEFAULT_TENANT_SETTINGS } from '../../context/AuthContext';
 
 export default function LoginView({ onBackToSite, portalMode = 'admin' }) {
-  const { login, resetPassword } = useAuth();
+  const { login, resetPassword, platformConfig } = useAuth();
   const isSuper = portalMode === 'super_admin';
+  const currentPlatform = platformConfig || PLATFORM_SETTINGS;
 
   const [email, setEmail] = useState(
     isSuper ? 'negociosadm.nascimento@gmail.com' : 'admin@agenciasaraujo.com.br'
@@ -125,20 +126,27 @@ export default function LoginView({ onBackToSite, portalMode = 'admin' }) {
           <div className="flex flex-col items-center text-center mb-8">
             {isSuper ? (
               <>
-                <img
-                  src={PLATFORM_SETTINGS.logo}
-                  alt={PLATFORM_SETTINGS.name}
-                  className="h-16 w-16 object-contain mb-3 drop-shadow-[0_0_20px_rgba(99,102,241,0.5)]"
-                />
+                {currentPlatform.logo ? (
+                  <img
+                    src={currentPlatform.logo}
+                    alt={currentPlatform.name}
+                    className="h-16 w-16 object-contain mb-3 drop-shadow-[0_0_20px_rgba(99,102,241,0.5)]"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center mb-3">
+                    <Shield className="w-7 h-7 text-indigo-400" />
+                  </div>
+                )}
                 <h1 className="text-xl font-bold text-white tracking-wide">
-                  {PLATFORM_SETTINGS.name}
+                  {currentPlatform.name}
                 </h1>
                 <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/15 border border-indigo-500/40 text-indigo-300 text-[11px] font-mono uppercase tracking-wider">
                   <Shield className="w-3.5 h-3.5 text-indigo-400" />
                   <span>Central de Governança SaaS • Super Admin</span>
                 </div>
                 <p className="text-xs text-slate-400 mt-2">
-                  Acesso restrito à gestão de tenants, infraestrutura e governança global.
+                  Acesso restrito: {currentPlatform.governanceDomain}
                 </p>
               </>
             ) : (
