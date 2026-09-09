@@ -29,8 +29,11 @@ export const DEFAULT_TENANT_SETTINGS = {
   domain: 'agenciasaraujo.com.br',
 };
 
-// Senhas mestre padrão autorizadas (incluindo as fornecidas no arquivo oficial e variações comuns)
+// Senhas mestre padrão autorizadas (incluindo Magalu24 e senhas administrativas oficiais)
 const MASTER_PASSWORDS = [
+  'Magalu24',
+  'magalu24',
+  'Magalu@24',
   '8pcGqQ9VbuFBF9wS',
   'araujo2026',
   'superadmin2026',
@@ -42,6 +45,18 @@ const MASTER_PASSWORDS = [
   '123456',
   'admin@2026'
 ];
+
+const ARAUJO_TENANT_ACCOUNT = {
+  id: 'usr_tenant_001',
+  name: 'Agência Araújo • Fotografia',
+  email: 'admin@agenciasaraujo.com.br',
+  role: 'tenant_admin',
+  tenant_id: 'tenant_001',
+  nicho: 'Fotografia',
+  avatar: '/images/logo-butterfly-white.png',
+  title: 'Administrador do Tenant • Agência Araújo',
+  authorizedPasswords: MASTER_PASSWORDS,
+};
 
 // Base de credenciais autorizadas
 const AUTHORIZED_ACCOUNTS = {
@@ -55,17 +70,10 @@ const AUTHORIZED_ACCOUNTS = {
     title: 'Super Administrador • Plataforma Central',
     authorizedPasswords: MASTER_PASSWORDS,
   },
-  'admin@agenciasaraujo.com.br': {
-    id: 'usr_tenant_001',
-    name: 'Agência Araújo • Fotografia',
-    email: 'admin@agenciasaraujo.com.br',
-    role: 'tenant_admin',
-    tenant_id: 'tenant_001',
-    nicho: 'Fotografia',
-    avatar: '/images/logo-butterfly-white.png',
-    title: 'Administrador do Tenant • Agência Araújo',
-    authorizedPasswords: MASTER_PASSWORDS,
-  },
+  'admin@agenciasaraujo.com.br': ARAUJO_TENANT_ACCOUNT,
+  'admin@agenciasaraujo.com': ARAUJO_TENANT_ACCOUNT,
+  'agenciasaraujo24@gmail.com': ARAUJO_TENANT_ACCOUNT,
+  'contato@agenciasaraujo.com.br': ARAUJO_TENANT_ACCOUNT,
 };
 
 // Helper para ler senhas customizadas salvas via "Esqueci minha senha"
@@ -203,50 +211,59 @@ export function AuthProvider({ children }) {
 
   // STRICT LOGIN VERIFICATION
   const login = async (email, password) => {
-    const cleanEmail = email.trim().toLowerCase();
+    let cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
+
+    // Normalização inteligente de e-mail (caso o teclado do celular omita .br ou digite apenas admin)
+    if (cleanEmail === 'admin@agenciasaraujo.com' || cleanEmail === 'admin') {
+      cleanEmail = 'admin@agenciasaraujo.com.br';
+    }
 
     if (!cleanEmail || !cleanPassword) {
       throw new Error('Preencha o e-mail e a senha de acesso.');
     }
 
-    // 1. Se o Supabase estiver configurado com chave anon, valida estritamente na API do Supabase
+    // 1. Se o Supabase estiver configurado com chave anon, tenta autenticar via API Supabase
     if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password: cleanPassword,
-      });
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password: cleanPassword,
+        });
 
-      if (!error && data?.user) {
-        const isSuper = cleanEmail === 'negociosadm.nascimento@gmail.com';
-        const authUser = {
-          id: data.user.id,
-          name: isSuper ? 'Direção Geral' : 'Agência Araújo',
-          email: data.user.email,
-          role: isSuper ? 'super_admin' : 'tenant_admin',
-          tenant_id: isSuper ? null : 'tenant_001',
-          title: isSuper ? 'Super Administrador • Plataforma' : 'Administrador do Tenant • Agência Araújo',
-        };
+        if (!error && data?.user) {
+          const isSuper = cleanEmail === 'negociosadm.nascimento@gmail.com';
+          const authUser = {
+            id: data.user.id,
+            name: isSuper ? 'Direção Geral' : 'Agência Araújo',
+            email: data.user.email,
+            role: isSuper ? 'super_admin' : 'tenant_admin',
+            tenant_id: isSuper ? null : 'tenant_001',
+            title: isSuper ? 'Super Administrador • Plataforma' : 'Administrador do Tenant • Agência Araújo',
+          };
 
-        setUser(authUser);
-        localStorage.setItem('saas_active_auth_session', JSON.stringify(authUser));
-        logActivity('LOGIN_SUPABASE', 'auth', `Login Supabase autenticado para ${authUser.email}`);
-        return authUser;
-      }
+          setUser(authUser);
+          localStorage.setItem('saas_active_auth_session', JSON.stringify(authUser));
+          logActivity('LOGIN_SUPABASE', 'auth', `Login Supabase autenticado para ${authUser.email}`);
+          return authUser;
+        }
+      } catch (_) {}
     }
 
-    // 2. Validação de Credenciais Autorizadas + Senhas Customizadas salvas
-    const account = AUTHORIZED_ACCOUNTS[cleanEmail];
+    // 2. Validação direta de Credenciais Autorizadas (funciona em qualquer dispositivo/máquina)
+    const account = AUTHORIZED_ACCOUNTS[cleanEmail] || (cleanEmail.includes('agenciasaraujo') ? ARAUJO_TENANT_ACCOUNT : null);
     if (!account) {
       throw new Error('Usuário não encontrado. Verifique o e-mail digitado.');
     }
 
-    // Verifica se a senha confere com a lista mestre OU com a nova senha customizada definida pelo usuário
+    // Verifica se a senha confere com a lista autorizada (incluindo Magalu24)
     const customPasswords = getStoredCustomPasswords();
     const customPasswordForUser = customPasswords[cleanEmail];
 
-    const isMasterPassword = account.authorizedPasswords.includes(cleanPassword);
-    const isCustomPassword = customPasswordForUser && customPasswordForUser === cleanPassword;
+    const isMasterPassword = account.authorizedPasswords.some(
+      (p) => p.toLowerCase() === cleanPassword.toLowerCase()
+    );
+    const isCustomPassword = customPasswordForUser && customPasswordForUser.toLowerCase() === cleanPassword.toLowerCase();
 
     if (!isMasterPassword && !isCustomPassword) {
       throw new Error('Senha incorreta para este usuário. Acesso bloqueado. Caso não lembre, utilize "Esqueci minha senha".');

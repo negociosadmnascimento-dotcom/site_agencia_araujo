@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Lock, Mail, ArrowRight, AlertCircle, ArrowLeft, KeyRound, CheckCircle2, X, Sparkles } from 'lucide-react';
+import { Shield, Lock, Mail, ArrowRight, AlertCircle, ArrowLeft, KeyRound, CheckCircle2, X, Sparkles, Eye, EyeOff } from 'lucide-react';
 import { useAuth, PLATFORM_SETTINGS, DEFAULT_TENANT_SETTINGS } from '../../context/AuthContext';
 
 export default function LoginView({ onBackToSite, portalMode = 'admin' }) {
@@ -10,6 +10,7 @@ export default function LoginView({ onBackToSite, portalMode = 'admin' }) {
     isSuper ? 'negociosadm.nascimento@gmail.com' : 'admin@agenciasaraujo.com.br'
   );
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -180,6 +181,9 @@ export default function LoginView({ onBackToSite, portalMode = 'admin' }) {
                 <input
                   type="email"
                   required
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck="false"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder={isSuper ? 'negociosadm.nascimento@gmail.com' : 'admin@agenciasaraujo.com.br'}
@@ -206,13 +210,24 @@ export default function LoginView({ onBackToSite, portalMode = 'admin' }) {
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   required
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck="false"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-black/50 border border-slate-700 focus:border-indigo-400 focus:outline-none text-white text-sm placeholder-slate-500 transition-colors"
+                  className="w-full pl-10 pr-11 py-3 rounded-xl bg-black/50 border border-slate-700 focus:border-indigo-400 focus:outline-none text-white text-sm placeholder-slate-500 transition-colors"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1 transition-colors"
+                  title={showPassword ? 'Ocultar senha' : 'Ver senha'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4 text-gold" /> : <Eye className="w-4 h-4 text-slate-400" />}
+                </button>
               </div>
             </div>
 
