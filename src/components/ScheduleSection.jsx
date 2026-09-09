@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Calendar as CalendarIcon, Clock, MapPin, Camera, User, Phone, Mail,
   CheckCircle2, AlertCircle, ChevronLeft, ChevronRight, Sparkles, Send,
-  ShieldCheck, ArrowRight, Sun, Sunset, Moon, Sunrise
+  ShieldCheck, ArrowRight, Sun, Sunset, Moon, Sunrise, X
 } from 'lucide-react';
 import WhatsAppIcon from './icons/WhatsAppIcon';
 import { CONTACT_INFO } from '../config/contact';
@@ -94,6 +94,22 @@ export default function ScheduleSection() {
   const [selectedDate, setSelectedDate] = useState('2026-03-12');
   const [selectedSlot, setSelectedSlot] = useState('16:30 - 18:30');
   const [sessions, setSessions] = useState([]);
+
+  // Modal de Relógio / Horário Personalizado
+  const [showTimeModal, setShowTimeModal] = useState(false);
+  const [customStartTime, setCustomStartTime] = useState('13:30');
+  const [customEndTime, setCustomEndTime] = useState('16:00');
+
+  const openTimePicker = () => {
+    if (selectedSlot && selectedSlot.includes('-')) {
+      const parts = selectedSlot.split('-');
+      if (parts.length === 2) {
+        setCustomStartTime(parts[0].trim().slice(0, 5));
+        setCustomEndTime(parts[1].trim().slice(0, 5));
+      }
+    }
+    setShowTimeModal(true);
+  };
 
   // Estado do formulário de reserva
   const [formData, setFormData] = useState({
@@ -490,157 +506,203 @@ export default function ScheduleSection() {
                 </span>
               </div>
 
-              {/* Cards de Turnos e Horários */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                {DEFAULT_TIME_SLOTS.map((slot) => {
-                  const Icon = slot.icon;
-                  const isBooked = isSlotBooked(slot.time);
-                  const isSelected = selectedSlot === slot.time && !isBooked;
+                {/* Cards de Turnos e Horários */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  {DEFAULT_TIME_SLOTS.map((slot) => {
+                    const Icon = slot.icon;
+                    const isBooked = isSlotBooked(slot.time);
+                    const isSelected = selectedSlot === slot.time && !isBooked;
 
-                  return (
-                    <button
-                      key={slot.id}
-                      type="button"
-                      disabled={isBooked}
-                      onClick={() => setSelectedSlot(slot.time)}
-                      className={`p-4 rounded-2xl border text-left transition-all duration-200 relative flex flex-col justify-between min-h-[105px] ${
-                        isBooked
-                          ? 'bg-stone-100 dark:bg-black/20 border-stone-300 dark:border-white/5 opacity-50 cursor-not-allowed'
-                          : isSelected
-                          ? 'bg-gold/15 border-gold dark:border-gold shadow-lg shadow-gold/10 ring-1 ring-gold text-slate-900 dark:text-white'
-                          : 'bg-stone-50 dark:bg-black/40 hover:bg-stone-100 dark:hover:bg-white/5 border-stone-200 dark:border-white/10 text-slate-800 dark:text-slate-200 hover:border-gold/40'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between w-full mb-2">
-                        <div className="flex items-center gap-2">
-                          <Icon className={`w-4 h-4 ${isSelected ? 'text-gold' : 'text-slate-400'}`} />
-                          <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">
-                            {slot.time}
-                          </span>
+                    return (
+                      <button
+                        key={slot.id}
+                        type="button"
+                        disabled={isBooked}
+                        onClick={() => setSelectedSlot(slot.time)}
+                        className={`p-4 rounded-2xl border text-left transition-all duration-200 relative flex flex-col justify-between min-h-[105px] ${
+                          isBooked
+                            ? 'bg-stone-100 dark:bg-black/20 border-stone-300 dark:border-white/5 opacity-50 cursor-not-allowed'
+                            : isSelected
+                            ? 'bg-gold/15 border-gold dark:border-gold shadow-lg shadow-gold/10 ring-1 ring-gold text-slate-900 dark:text-white'
+                            : 'bg-stone-50 dark:bg-black/40 hover:bg-stone-100 dark:hover:bg-white/5 border-stone-200 dark:border-white/10 text-slate-800 dark:text-slate-200 hover:border-gold/40'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between w-full mb-2">
+                          <div className="flex items-center gap-2">
+                            <Icon className={`w-4 h-4 ${isSelected ? 'text-gold' : 'text-slate-400'}`} />
+                            <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">
+                              {slot.time}
+                            </span>
+                          </div>
+
+                          {isBooked ? (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-rose-500/15 text-rose-500 border border-rose-500/30">
+                              Indisponível
+                            </span>
+                          ) : isSelected ? (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3" /> Selecionado
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                              Disponível
+                            </span>
+                          )}
                         </div>
 
-                        {isBooked ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-rose-500/15 text-rose-500 border border-rose-500/30">
-                            Indisponível
-                          </span>
-                        ) : isSelected ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3" /> Selecionado
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                            Disponível
-                          </span>
-                        )}
-                      </div>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 block line-clamp-1">
+                          {slot.label}
+                        </span>
+                      </button>
+                    );
+                  })}
 
-                      <span className="text-xs text-slate-500 dark:text-slate-400 block line-clamp-1">
-                        {slot.label}
+                  {/* Card Especial: Personalizar Início e Término com Relógio */}
+                  <button
+                    type="button"
+                    onClick={openTimePicker}
+                    className={`p-4 rounded-2xl border text-left transition-all duration-200 relative flex flex-col justify-between min-h-[105px] sm:col-span-2 ${
+                      !DEFAULT_TIME_SLOTS.some((s) => s.time === selectedSlot)
+                        ? 'bg-gold/15 border-gold dark:border-gold shadow-lg shadow-gold/10 ring-1 ring-gold text-slate-900 dark:text-white'
+                        : 'bg-stone-50 dark:bg-black/40 hover:bg-stone-100 dark:hover:bg-white/5 border-stone-200 dark:border-white/10 text-slate-800 dark:text-slate-200 hover:border-gold/40'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-2">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-gold" />
+                        <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">
+                          {!DEFAULT_TIME_SLOTS.some((s) => s.time === selectedSlot)
+                            ? `${selectedSlot} (Personalizado)`
+                            : 'Personalizar Horário Específico'}
+                        </span>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider bg-gold-gradient text-dark-950 flex items-center gap-1 shadow-sm">
+                        ⏰ Abrir Relógio
                       </span>
-                    </button>
-                  );
-                })}
+                    </div>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 block">
+                      {!DEFAULT_TIME_SLOTS.some((s) => s.time === selectedSlot)
+                        ? '✓ Horário específico ativo na sua reserva. Clique para abrir o relógio e ajustar.'
+                        : 'Deseja reservar em outro horário? Clique para abrir o relógio e definir início e término.'}
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Coluna Direita (5 Colunas): Formulário Conectado ao Admin */}
-          <div className="lg:col-span-5">
-            <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-dark-900/90 border border-stone-200 dark:border-gold/30 shadow-2xl relative">
-              {submittedBooking ? (
-                /* Card de Confirmação de Sucesso */
-                <div className="py-8 text-center space-y-6">
-                  <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-500 border border-emerald-500/40 flex items-center justify-center mx-auto animate-bounce">
-                    <CheckCircle2 className="w-8 h-8" />
-                  </div>
-
-                  <div>
-                    <span className="text-xs font-mono uppercase tracking-widest text-gold font-bold block mb-1">
-                      Agendamento Registrado!
-                    </span>
-                    <h3 className="text-2xl font-serif font-bold text-slate-900 dark:text-white">
-                      Solicitação Enviada com Sucesso
-                    </h3>
-                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-2">
-                      Sua sessão foi cadastrada diretamente na <strong>Agenda de Ensaios</strong> da Agências Araújo.
-                    </p>
-                  </div>
-
-                  {/* Resumo do Agendamento */}
-                  <div className="p-4 rounded-2xl bg-stone-50 dark:bg-black/50 border border-stone-200 dark:border-white/10 text-left text-xs space-y-2 font-mono">
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Cliente:</span>
-                      <strong className="text-slate-900 dark:text-white">{submittedBooking.client}</strong>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Data & Turno:</span>
-                      <strong className="text-gold">{submittedBooking.formattedDate} às {submittedBooking.time}</strong>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Tipo de Sessão:</span>
-                      <strong className="text-slate-900 dark:text-white">{submittedBooking.type}</strong>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Locação no RJ:</span>
-                      <strong className="text-slate-900 dark:text-white truncate max-w-[200px]">{submittedBooking.location}</strong>
-                    </div>
-                    <div className="flex justify-between pt-1 border-t border-white/5">
-                      <span className="text-slate-400">Status no Painel Admin:</span>
-                      <span className="text-amber-400 font-bold">Pendente Sinal (Reservado)</span>
-                    </div>
-                  </div>
-
-                  {/* Ações */}
-                  <div className="space-y-3 pt-2">
-                    <a
-                      href={`https://wa.me/${CONTACT_INFO.whatsapp.number}?text=${encodeURIComponent(
-                        `*CONFIRMAÇÃO DE AGENDAMENTO*\nOlá! Acabei de solicitar o agendamento no site para ${submittedBooking.formattedDate} às ${submittedBooking.time} (${submittedBooking.type}). Nome: ${submittedBooking.client}. Aguardo confirmação dos detalhes!`
-                      )}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full py-3.5 px-6 rounded-xl bg-gold-gradient text-dark-950 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl hover:brightness-110 transition-all"
-                    >
-                      <WhatsAppIcon className="w-4 h-4 text-dark-950 fill-dark-950" />
-                      <span>Falar no WhatsApp para Confirmar</span>
-                    </a>
-
-                    <button
-                      onClick={resetForm}
-                      className="w-full py-2.5 px-4 rounded-xl bg-stone-100 hover:bg-stone-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-semibold uppercase tracking-wider transition-colors"
-                    >
-                      Realizar Outro Agendamento
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                /* Formulário de Coleta de Dados */
-                <form onSubmit={handleScheduleSubmit} className="space-y-5">
-                  <div>
-                    <span className="text-xs font-mono uppercase tracking-wider text-gold font-bold">
-                      Passo 3 de 3
-                    </span>
-                    <h3 className="text-xl font-serif font-bold text-slate-900 dark:text-white">
-                      Confirmar Reserva
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      Todos os dados serão sincronizados instantaneamente com o painel do fotógrafo.
-                    </p>
-                  </div>
-
-                  {/* Resumo da Data/Hora selecionada no passo 1 e 2 */}
-                  <div className="p-3.5 rounded-2xl bg-gold/10 border border-gold/30 flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                      <CalendarIcon className="w-4 h-4 text-gold shrink-0" />
-                      <span className="font-semibold">{toDisplayDate(selectedDate)}</span>
-                      <span className="text-slate-400">•</span>
-                      <Clock className="w-4 h-4 text-gold shrink-0" />
-                      <span className="font-mono font-bold text-gold">{selectedSlot}</span>
+            {/* Coluna Direita (5 Colunas): Formulário Conectado ao Admin */}
+            <div className="lg:col-span-5">
+              <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-dark-900/90 border border-stone-200 dark:border-gold/30 shadow-2xl relative">
+                {submittedBooking ? (
+                  /* Card de Confirmação de Sucesso */
+                  <div className="py-8 text-center space-y-6">
+                    <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-500 border border-emerald-500/40 flex items-center justify-center mx-auto animate-bounce">
+                      <CheckCircle2 className="w-8 h-8" />
                     </div>
 
-                    <span className="text-[10px] font-mono uppercase tracking-wider bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded font-bold">
-                      Vaga Livre
-                    </span>
+                    <div>
+                      <span className="text-xs font-mono uppercase tracking-widest text-gold font-bold block mb-1">
+                        Agendamento Registrado!
+                      </span>
+                      <h3 className="text-2xl font-serif font-bold text-slate-900 dark:text-white">
+                        Solicitação Enviada com Sucesso
+                      </h3>
+                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-2">
+                        Sua sessão foi cadastrada diretamente na <strong>Agenda de Ensaios</strong> da Agências Araújo.
+                      </p>
+                    </div>
+
+                    {/* Resumo do Agendamento */}
+                    <div className="p-4 rounded-2xl bg-stone-50 dark:bg-black/50 border border-stone-200 dark:border-white/10 text-left text-xs space-y-2 font-mono">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Cliente:</span>
+                        <strong className="text-slate-900 dark:text-white">{submittedBooking.client}</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Data & Turno:</span>
+                        <strong className="text-gold">{submittedBooking.formattedDate} às {submittedBooking.time}</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Tipo de Sessão:</span>
+                        <strong className="text-slate-900 dark:text-white">{submittedBooking.type}</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Locação no RJ:</span>
+                        <strong className="text-slate-900 dark:text-white truncate max-w-[200px]">{submittedBooking.location}</strong>
+                      </div>
+                      <div className="flex justify-between pt-1 border-t border-white/5">
+                        <span className="text-slate-400">Status no Painel Admin:</span>
+                        <span className="text-amber-400 font-bold">Pendente Sinal (Reservado)</span>
+                      </div>
+                    </div>
+
+                    {/* Ações */}
+                    <div className="space-y-3 pt-2">
+                      <a
+                        href={`https://wa.me/${CONTACT_INFO.whatsapp.number}?text=${encodeURIComponent(
+                          `*CONFIRMAÇÃO DE AGENDAMENTO*\nOlá! Acabei de solicitar o agendamento no site para ${submittedBooking.formattedDate} às ${submittedBooking.time} (${submittedBooking.type}). Nome: ${submittedBooking.client}. Aguardo confirmação dos detalhes!`
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-3.5 px-6 rounded-xl bg-gold-gradient text-dark-950 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl hover:brightness-110 transition-all"
+                      >
+                        <WhatsAppIcon className="w-4 h-4 text-dark-950 fill-dark-950" />
+                        <span>Falar no WhatsApp para Confirmar</span>
+                      </a>
+
+                      <button
+                        onClick={resetForm}
+                        className="w-full py-2.5 px-4 rounded-xl bg-stone-100 hover:bg-stone-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-semibold uppercase tracking-wider transition-colors"
+                      >
+                        Realizar Outro Agendamento
+                      </button>
+                    </div>
                   </div>
+                ) : (
+                  /* Formulário de Coleta de Dados */
+                  <form onSubmit={handleScheduleSubmit} className="space-y-5">
+                    <div>
+                      <span className="text-xs font-mono uppercase tracking-wider text-gold font-bold">
+                        Passo 3 de 3
+                      </span>
+                      <h3 className="text-xl font-serif font-bold text-slate-900 dark:text-white">
+                        Confirmar Reserva
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Todos os dados serão sincronizados instantaneamente com o painel do fotógrafo.
+                      </p>
+                    </div>
+
+                    {/* Resumo da Data/Hora selecionada no passo 1 e 2 com Relógio interativo */}
+                    <div className="p-3.5 rounded-2xl bg-gold/10 border border-gold/30 flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <div className="flex items-center gap-2 text-slate-800 dark:text-slate-200 flex-wrap">
+                        <div className="flex items-center gap-1.5">
+                          <CalendarIcon className="w-4 h-4 text-gold shrink-0" />
+                          <span className="font-semibold">{toDisplayDate(selectedDate)}</span>
+                        </div>
+                        <span className="text-slate-400">•</span>
+                        
+                        {/* Botão de Relógio ao clicar no Horário */}
+                        <button
+                          type="button"
+                          onClick={openTimePicker}
+                          title="Clique para abrir o relógio e personalizar o horário de início e término"
+                          className="group inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-gold/20 hover:bg-gold/30 border border-gold/50 text-gold transition-all cursor-pointer shadow-sm hover:scale-[1.02] active:scale-95"
+                        >
+                          <Clock className="w-3.5 h-3.5 text-gold group-hover:rotate-45 transition-transform" />
+                          <span className="font-mono font-bold text-gold underline decoration-dotted underline-offset-2">
+                            {selectedSlot}
+                          </span>
+                          <span className="text-[10px] bg-gold text-dark-950 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center gap-1 ml-0.5">
+                            ⏰ Relógio
+                          </span>
+                        </button>
+                      </div>
+
+                      <span className="text-[10px] font-mono uppercase tracking-wider bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded font-bold">
+                        Vaga Livre
+                      </span>
+                    </div>
 
                   {errorMessage && (
                     <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-2">
@@ -784,6 +846,155 @@ export default function ScheduleSection() {
           </div>
         </div>
       </div>
+
+      {/* Modal de Relógio / Horário Personalizado com Início e Término */}
+      {showTimeModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 border border-gold/40 p-6 sm:p-7 shadow-2xl relative text-slate-900 dark:text-white">
+            <button
+              type="button"
+              onClick={() => setShowTimeModal(false)}
+              className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 dark:hover:text-white p-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-11 h-11 rounded-2xl bg-gold/20 border border-gold/40 flex items-center justify-center text-gold shadow-md shadow-gold/10">
+                <Clock className="w-6 h-6 text-gold" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold font-serif text-slate-900 dark:text-white">
+                  Personalizar Horário do Ensaio
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Data: <strong className="text-gold">{toDisplayDate(selectedDate)}</strong>
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 mb-5 leading-relaxed">
+              Defina o horário específico de <strong>início</strong> e <strong>término</strong> para sua produção fotográfica ou clique em um dos turnos rápidos abaixo:
+            </p>
+
+            {/* Inputs de Horário com Relógio */}
+            <div className="grid grid-cols-2 gap-3 mb-5">
+              <div className="p-3.5 rounded-2xl bg-stone-100 dark:bg-black/50 border border-stone-200 dark:border-white/10">
+                <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <Sunrise className="w-3.5 h-3.5 text-gold" />
+                  <span>Início</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="time"
+                    required
+                    value={customStartTime}
+                    onChange={(e) => setCustomStartTime(e.target.value)}
+                    onClick={(e) => {
+                      try { e.target.showPicker?.(); } catch (_) {}
+                    }}
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-stone-300 dark:border-slate-700 text-slate-900 dark:text-white font-mono font-bold text-base focus:border-gold focus:outline-none [color-scheme:dark] cursor-pointer shadow-sm"
+                  />
+                </div>
+                <span className="text-[10px] text-slate-400 mt-1 block">Clique para abrir relógio</span>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-stone-100 dark:bg-black/50 border border-stone-200 dark:border-white/10">
+                <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <Sunset className="w-3.5 h-3.5 text-gold" />
+                  <span>Término</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="time"
+                    required
+                    value={customEndTime}
+                    onChange={(e) => setCustomEndTime(e.target.value)}
+                    onClick={(e) => {
+                      try { e.target.showPicker?.(); } catch (_) {}
+                    }}
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-stone-300 dark:border-slate-700 text-slate-900 dark:text-white font-mono font-bold text-base focus:border-gold focus:outline-none [color-scheme:dark] cursor-pointer shadow-sm"
+                  />
+                </div>
+                <span className="text-[10px] text-slate-400 mt-1 block">Clique para abrir relógio</span>
+              </div>
+            </div>
+
+            {/* Turnos Rápidos Pré-configurados */}
+            <div className="mb-5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-2 font-mono">
+                Ou selecione um turno rápido:
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                {DEFAULT_TIME_SLOTS.map((slot) => {
+                  const isCurrent = `${customStartTime} - ${customEndTime}` === slot.time;
+                  return (
+                    <button
+                      key={slot.id}
+                      type="button"
+                      onClick={() => {
+                        const [s, e] = slot.time.split(' - ');
+                        setCustomStartTime(s);
+                        setCustomEndTime(e);
+                      }}
+                      className={`p-2.5 rounded-xl border text-left text-xs transition-all ${
+                        isCurrent
+                          ? 'bg-gold/20 border-gold text-gold font-bold ring-1 ring-gold shadow-sm'
+                          : 'bg-stone-50 dark:bg-white/5 border-stone-200 dark:border-white/5 hover:border-gold/40 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      <div className="font-mono font-bold flex items-center justify-between">
+                        <span>{slot.time}</span>
+                        {isCurrent && <span className="text-[10px]">✓</span>}
+                      </div>
+                      <div className="text-[10px] text-slate-400 truncate mt-0.5">{slot.label.split('(')[0]}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Preview do Horário Selecionado */}
+            <div className="p-3.5 rounded-2xl bg-gold/10 border border-gold/30 mb-6 flex items-center justify-between">
+              <div>
+                <span className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold block">
+                  Horário Definido:
+                </span>
+                <div className="font-mono font-bold text-gold text-base">
+                  {customStartTime} - {customEndTime}
+                </div>
+              </div>
+              <span className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-500 border border-emerald-500/30">
+                Horário Válido
+              </span>
+            </div>
+
+            {/* Ações */}
+            <div className="flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowTimeModal(false)}
+                className="px-4 py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 dark:bg-white/5 dark:hover:bg-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (customStartTime && customEndTime) {
+                    setSelectedSlot(`${customStartTime} - ${customEndTime}`);
+                    setShowTimeModal(false);
+                  }
+                }}
+                className="px-5 py-2.5 rounded-xl bg-gold-gradient text-dark-950 font-bold text-xs uppercase tracking-wider hover:brightness-110 shadow-lg shadow-gold/20 transition-all flex items-center gap-1.5"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Confirmar Horário</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
