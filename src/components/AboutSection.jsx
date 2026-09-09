@@ -15,7 +15,7 @@ export default function AboutSection() {
       icon: ShieldCheck,
     },
     {
-      title: "Equipamentos de Cinema",
+      title: "Equipamentos de Ponta",
       desc: "Câmeras de altíssima definição, ótica de ponta e iluminação modeladora para nitidez inigualável.",
       icon: Camera,
     },
