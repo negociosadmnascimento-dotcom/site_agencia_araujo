@@ -8,6 +8,7 @@ import ScheduleSection from './components/ScheduleSection';
 import AboutSection from './components/AboutSection';
 import InstagramSection from './components/InstagramSection';
 import QuoteForm from './components/QuoteForm';
+import TestimonialsSection from './components/TestimonialsSection';
 import WhatsAppFloat from './components/WhatsAppFloat';
 import Footer from './components/Footer';
 
@@ -134,6 +135,7 @@ export default function App() {
         <ServicesSection />
         <PortfolioSection />
         <ScheduleSection />
+        <TestimonialsSection />
         <AboutSection />
         <InstagramSection />
         <QuoteForm />
