@@ -52,28 +52,14 @@ export default function LeadsModule() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // ── Carregar leads com sincronização híbrida (Supabase + Site Submissions) ──
-  const SEED_LEADS = [
-    {
-      id: 'lead_nicoly_0909',
-      name: 'Nicoly Gomes de Castro',
-      service: 'Gestante & Família',
-      phone: '(21) 97553-0689',
-      email: 'nicolygomes021@gmail.com',
-      source: 'Formulário do Site (Orçamento)',
-      estimatedValue: 'R$ 850,00',
-      stage: 'novo',
-      date: '09/09/2026, 14:02',
-      notes: '2 pessoas (gestante e namorado), seriam fotos em estúdio | Data Prevista: novembro | Solicitado via site',
-    }
-  ];
-
+  // ── Carregar leads com sincronização em nuvem e persistência de exclusões ──
   const loadLeads = useCallback(async () => {
     setLoading(true);
     setError(null);
+    const deletedIds = JSON.parse(localStorage.getItem("admin_deleted_lead_ids") || "[]");
     let resultLeads = [];
 
-    // 1. Tenta carregar do Supabase se configurado
+    // 1. Tenta carregar exclusivamente da tabela oficial de leads do Supabase
     if (isSupabaseConfigured && supabase) {
       try {
         const { data, error: sbError } = await supabase
@@ -84,67 +70,41 @@ export default function LeadsModule() {
         if (!sbError && data && data.length > 0) {
           resultLeads = data.map(mapRow);
         }
-
-        // Também carrega submissões do formulário registradas no Supabase
-        const { data: formData, error: formError } = await supabase
-          .from("form_submissions")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (!formError && formData && formData.length > 0) {
-          const formMapped = formData.map(f => ({
-            id: 'sb_form_' + f.id,
-            name: f.name,
-            service: f.service || 'Orçamento do Site',
-            phone: f.phone,
-            email: f.email || '',
-            source: 'Formulário do Site',
-            estimatedValue: 'A definir',
-            stage: 'novo',
-            date: f.created_at ? new Date(f.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : 'Hoje',
-            notes: f.message || '',
-          }));
-          resultLeads = [...resultLeads, ...formMapped];
-        }
       } catch (err) {
         console.warn("Supabase query fallback:", err);
       }
     }
 
-    // 2. Mescla com entradas do formulário do site e leads gravados localmente
+    // 2. Mescla com leads gravados localmente caso haja algum offline
     try {
       const localLeads = JSON.parse(localStorage.getItem("admin_leads") || "[]");
-      const siteSubmissions = JSON.parse(localStorage.getItem("site_form_submissions") || "[]");
+      const combined = [...resultLeads, ...localLeads];
 
-      // Converte submissões de formulário ainda não presentes em leads
-      const convertedSite = siteSubmissions.map(sub => ({
-        id: "from_" + sub.id,
-        name: sub.name,
-        service: sub.service,
-        phone: sub.phone,
-        email: sub.email || "",
-        source: sub.source || "Formulário do Site",
-        estimatedValue: "A definir",
-        stage: "novo",
-        date: sub.createdAt || "Hoje",
-        notes: sub.message || (sub.eventDate ? `Data solicitada: ${sub.eventDate}` : ""),
-      }));
+      // Deduplicação estrita por ID e por Telefone normalizado
+      const normalizePhone = (p) => (p || "").replace(/\D/g, "");
+      const seenIds = new Set();
+      const seenPhones = new Set();
+      const unique = [];
 
-      // Combina leads locais + site + seeds sem duplicação de IDs
-      const allCombined = [...localLeads, ...convertedSite, ...SEED_LEADS];
-      const uniqueMap = new Map();
+      for (const lead of combined) {
+        if (!lead || !lead.id) continue;
+        const strId = String(lead.id);
+        const normPhone = normalizePhone(lead.phone);
 
-      // Prioriza dados do Supabase se houver
-      resultLeads.forEach(l => uniqueMap.set(l.id, l));
-      allCombined.forEach(l => {
-        if (!uniqueMap.has(l.id) && !uniqueMap.has(l.phone)) {
-          uniqueMap.set(l.id, l);
-        }
-      });
+        // Se o lead foi explicitamente removido pelo usuário, não ressuscita
+        if (deletedIds.includes(strId)) continue;
 
-      resultLeads = Array.from(uniqueMap.values());
+        if (seenIds.has(strId)) continue;
+        if (normPhone && seenPhones.has(normPhone)) continue;
+
+        seenIds.add(strId);
+        if (normPhone) seenPhones.add(normPhone);
+        unique.push(lead);
+      }
+
+      resultLeads = unique;
     } catch (e) {
-      if (resultLeads.length === 0) resultLeads = SEED_LEADS;
+      console.warn("Erro ao consolidar leads:", e);
     }
 
     setLeads(resultLeads);
@@ -180,9 +140,9 @@ export default function LeadsModule() {
       return updated;
     });
 
-    if (isSupabaseConfigured) {
+    if (isSupabaseConfigured && supabase) {
       try {
-        await supabase.from("leads").update({ etapa: "perdido" }).eq("id", leadId);
+        await supabase.from("leads").update({ status: "perdido", etapa: "perdido" }).eq("id", leadId);
       } catch (err) {
         console.warn("Erro ao arquivar no Supabase:", err);
       }
@@ -201,9 +161,9 @@ export default function LeadsModule() {
       return updated;
     });
 
-    if (isSupabaseConfigured) {
+    if (isSupabaseConfigured && supabase) {
       try {
-        await supabase.from("leads").update({ etapa: "novo" }).eq("id", leadId);
+        await supabase.from("leads").update({ status: "novo", etapa: "novo" }).eq("id", leadId);
       } catch (err) {
         console.warn("Erro ao reativar no Supabase:", err);
       }
@@ -215,7 +175,6 @@ export default function LeadsModule() {
 
   // ── Avançar etapa ──────────────────────────────────────────────────────────
   const moveStage = async (leadId, nextStage) => {
-    // Atualiza estado local
     setLeads((prev) => {
       const updated = prev.map((l) => (l.id === leadId ? { ...l, stage: nextStage } : l));
       try {
@@ -224,9 +183,9 @@ export default function LeadsModule() {
       return updated;
     });
 
-    if (isSupabaseConfigured) {
+    if (isSupabaseConfigured && supabase) {
       try {
-        await supabase.from("leads").update({ etapa: nextStage }).eq("id", leadId);
+        await supabase.from("leads").update({ status: nextStage, etapa: nextStage }).eq("id", leadId);
       } catch (err) {
         console.warn("Erro ao atualizar etapa no Supabase:", err);
       }
@@ -239,6 +198,14 @@ export default function LeadsModule() {
   // ── Deletar lead ───────────────────────────────────────────────────────────
   const deleteLead = async (id, name) => {
     if (!window.confirm(`Remover lead "${name}"?`)) return;
+
+    // Registra exclusão permanente no navegador
+    const deletedIds = JSON.parse(localStorage.getItem("admin_deleted_lead_ids") || "[]");
+    if (!deletedIds.includes(String(id))) {
+      deletedIds.push(String(id));
+      localStorage.setItem("admin_deleted_lead_ids", JSON.stringify(deletedIds));
+    }
+
     setLeads((prev) => {
       const filtered = prev.filter((l) => l.id !== id);
       try {
@@ -247,7 +214,7 @@ export default function LeadsModule() {
       return filtered;
     });
 
-    if (isSupabaseConfigured) {
+    if (isSupabaseConfigured && supabase) {
       try {
         await supabase.from("leads").delete().eq("id", id);
       } catch (err) {
@@ -256,7 +223,7 @@ export default function LeadsModule() {
     }
 
     logActivity?.("REMOCAO_LEAD", "leads", `Removeu lead: ${name}`);
-    showToast("Lead removido.", "error");
+    showToast("Lead removido com sucesso!", "error");
   };
 
   // ── Adicionar novo lead ────────────────────────────────────────────────────
@@ -267,31 +234,63 @@ export default function LeadsModule() {
       return;
     }
     setSaving(true);
-    const { data, error: sbError } = await supabase
-      .from("leads")
-      .insert([{
-        nome: newLead.name,
-        servico: newLead.service,
-        telefone: newLead.phone,
-        email: newLead.email,
-        valor_estimado: newLead.estimatedValue,
-        observacoes: newLead.notes,
-        etapa: newLead.stage,
-        origem: newLead.source,
-      }])
-      .select()
-      .single();
+    let createdLead = null;
 
-    setSaving(false);
-    if (sbError) {
-      showToast("Erro ao salvar lead: " + sbError.message, "error");
-      return;
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data, error: sbError } = await supabase
+          .from("leads")
+          .insert([{
+            nome: newLead.name,
+            servico: newLead.service,
+            telefone: newLead.phone,
+            email: newLead.email,
+            valor_estimado: newLead.estimatedValue || "A definir",
+            observacoes: newLead.notes || "",
+            mensagem: newLead.notes || "",
+            etapa: newLead.stage || "novo",
+            status: newLead.stage || "novo",
+            origem: newLead.source || "Manual",
+          }])
+          .select()
+          .single();
+
+        if (!sbError && data) {
+          createdLead = mapRow(data);
+        }
+      } catch (err) {
+        console.warn("Erro ao adicionar no Supabase:", err);
+      }
     }
-    setLeads((prev) => [mapRow(data), ...prev]);
-    logActivity("NOVO_LEAD", "leads", `Novo lead criado: ${newLead.name}`);
+
+    if (!createdLead) {
+      createdLead = {
+        id: `lead_${Date.now()}`,
+        name: newLead.name,
+        service: newLead.service,
+        phone: newLead.phone,
+        email: newLead.email,
+        source: newLead.source || "Manual",
+        estimatedValue: newLead.estimatedValue || "A definir",
+        stage: newLead.stage || "novo",
+        date: new Date().toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }),
+        notes: newLead.notes || "",
+      };
+    }
+
+    setLeads((prev) => {
+      const updated = [createdLead, ...prev];
+      try {
+        localStorage.setItem("admin_leads", JSON.stringify(updated));
+      } catch (_) {}
+      return updated;
+    });
+
+    logActivity?.("NOVO_LEAD", "leads", `Novo lead criado: ${newLead.name}`);
     showToast(`Lead "${newLead.name}" adicionado ao funil!`);
     setNewLead(EMPTY_FORM);
     setShowModal(false);
+    setSaving(false);
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────

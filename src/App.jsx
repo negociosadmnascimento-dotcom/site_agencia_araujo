@@ -88,63 +88,54 @@ export default function App() {
       }
     } catch (_) {}
 
-    // 2. Garantir persistência do contato real de Nicoly Gomes de Castro (solicitação real de 09/09)
+    // 2. Limpeza e deduplicação única para o navegador local
     try {
-      const NICOLY_PHONE = '97553-0689';
-      
-      // Injeta em site_form_submissions se não existir
-      const forms = JSON.parse(localStorage.getItem('site_form_submissions') || '[]');
-      if (!forms.some(f => f && f.phone && f.phone.includes(NICOLY_PHONE))) {
-        forms.unshift({
-          id: 'sub_nicoly_0909',
-          name: 'Nicoly Gomes de Castro',
-          email: 'nicolygomes021@gmail.com',
-          phone: '(21) 97553-0689',
-          service: 'Gestante & Família',
-          eventDate: 'Novembro / 2026',
-          message: '2 pessoas (gestante e namorado), seriam fotos em estúdio',
-          createdAt: '09/09/2026, 14:02',
-          read: false,
-          source: 'Formulário do Site',
-        });
-        localStorage.setItem('site_form_submissions', JSON.stringify(forms));
-      }
+      const DEDUP_KEY = 'agencia_dedup_cleanup_v3';
+      if (!localStorage.getItem(DEDUP_KEY)) {
+        const deletedLeadIds = JSON.parse(localStorage.getItem('admin_deleted_lead_ids') || '[]');
+        const deletedFormIds = JSON.parse(localStorage.getItem('admin_forms_deleted_ids') || '[]');
+        const normalize = (p) => (p || '').replace(/\D/g, '');
 
-      // Injeta em admin_leads se não existir
-      const leads = JSON.parse(localStorage.getItem('admin_leads') || '[]');
-      if (!leads.some(l => l && l.phone && l.phone.includes(NICOLY_PHONE))) {
-        leads.unshift({
-          id: 'lead_nicoly_0909',
-          name: 'Nicoly Gomes de Castro',
-          service: 'Gestante & Família',
-          phone: '(21) 97553-0689',
-          email: 'nicolygomes021@gmail.com',
-          source: 'Formulário do Site (Orçamento)',
-          estimatedValue: 'R$ 850,00',
-          stage: 'novo',
-          date: '09/09/2026, 14:02',
-          notes: '2 pessoas (gestante e namorado), seriam fotos em estúdio | Data Prevista: novembro | Solicitado via site',
-        });
-        localStorage.setItem('admin_leads', JSON.stringify(leads));
-      }
+        // Deduplica leads locais
+        const leads = JSON.parse(localStorage.getItem('admin_leads') || '[]');
+        const seenLeadPhones = new Set();
+        const cleanLeads = [];
+        for (const l of leads) {
+          if (!l || !l.id || deletedLeadIds.includes(String(l.id))) continue;
+          const phone = normalize(l.phone);
+          if (phone && seenLeadPhones.has(phone)) continue;
+          if (phone) seenLeadPhones.add(phone);
+          cleanLeads.push(l);
+        }
+        localStorage.setItem('admin_leads', JSON.stringify(cleanLeads));
 
-      // Injeta em admin_clients se não existir
-      const clients = JSON.parse(localStorage.getItem('admin_clients') || '[]');
-      if (!clients.some(c => c && c.phone && c.phone.includes(NICOLY_PHONE))) {
-        clients.unshift({
-          id: 'cli_nicoly_0909',
-          name: 'Nicoly Gomes de Castro',
-          role: 'Cliente Particular',
-          category: 'Retratos Pessoais',
-          email: 'nicolygomes021@gmail.com',
-          phone: '(21) 97553-0689',
-          totalSpent: 'R$ 0,00',
-          sessionsCount: 0,
-          status: 'Em Prospecção',
-          lastSession: 'Pendente (Previsto Nov/26)',
-          notes: 'Ensaio Gestante & Família em estúdio com namorado. Contato via WhatsApp em 09/09.',
-        });
-        localStorage.setItem('admin_clients', JSON.stringify(clients));
+        // Deduplica formulários locais
+        const forms = JSON.parse(localStorage.getItem('site_form_submissions') || '[]');
+        const seenFormPhones = new Set();
+        const cleanForms = [];
+        for (const f of forms) {
+          if (!f || !f.id || deletedFormIds.includes(String(f.id))) continue;
+          const phone = normalize(f.phone);
+          if (phone && seenFormPhones.has(phone)) continue;
+          if (phone) seenFormPhones.add(phone);
+          cleanForms.push(f);
+        }
+        localStorage.setItem('site_form_submissions', JSON.stringify(cleanForms));
+
+        // Deduplica clientes locais
+        const clients = JSON.parse(localStorage.getItem('admin_clients') || '[]');
+        const seenClientPhones = new Set();
+        const cleanClients = [];
+        for (const c of clients) {
+          if (!c || !c.id) continue;
+          const phone = normalize(c.phone);
+          if (phone && seenClientPhones.has(phone)) continue;
+          if (phone) seenClientPhones.add(phone);
+          cleanClients.push(c);
+        }
+        localStorage.setItem('admin_clients', JSON.stringify(cleanClients));
+
+        localStorage.setItem(DEDUP_KEY, 'done');
       }
     } catch (_) {}
 

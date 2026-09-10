@@ -11,20 +11,7 @@ const STORAGE_KEY = 'site_form_submissions';
 const READ_KEY = 'admin_forms_read_ids';
 const DELETED_KEY = 'admin_forms_deleted_ids';
 
-const SAMPLE_SUBMISSIONS = [
-  {
-    id: 'sub_nicoly_0909',
-    name: 'Nicoly Gomes de Castro',
-    email: 'nicolygomes021@gmail.com',
-    phone: '(21) 97553-0689',
-    service: 'Gestante & Família',
-    eventDate: 'Novembro / 2026',
-    message: '2 pessoas (gestante e namorado), seriam fotos em estúdio',
-    createdAt: '09/09/2026, 14:02',
-    read: false,
-    source: 'Formulário do Site',
-  }
-];
+const SAMPLE_SUBMISSIONS = [];
 
 export default function FormsInboxModule({ onNavigate }) {
   const { logActivity } = useAuth();
@@ -48,6 +35,7 @@ export default function FormsInboxModule({ onNavigate }) {
           if (!error && data && data.length > 0) {
             cloudSubmissions = data.map(r => ({
               id: 'sb_' + r.id,
+              rawId: r.id,
               name: r.name,
               email: r.email || '',
               phone: r.phone,
@@ -65,23 +53,39 @@ export default function FormsInboxModule({ onNavigate }) {
       }
 
       const real = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-      const uniqueMap = new Map();
+      const normalizePhone = (p) => (p || '').replace(/\D/g, '');
+      const seenIds = new Set();
+      const seenPhones = new Set();
+      const unique = [];
 
-      [...cloudSubmissions, ...real, ...SAMPLE_SUBMISSIONS].forEach(s => {
-        if (!deletedIds.includes(s.id) && !uniqueMap.has(s.id) && !uniqueMap.has(s.phone)) {
-          uniqueMap.set(s.id, { ...s, read: readIds.includes(s.id) ? true : s.read });
-        }
-      });
+      for (const s of [...cloudSubmissions, ...real]) {
+        if (!s || !s.id) continue;
+        const strId = String(s.id);
+        const rawId = s.rawId ? String(s.rawId) : strId.replace('sb_', '');
+        const normPhone = normalizePhone(s.phone);
 
-      setSubmissions(Array.from(uniqueMap.values()));
+        // Se foi excluído, ignora
+        if (deletedIds.includes(strId) || deletedIds.includes(rawId)) continue;
+
+        if (seenIds.has(strId) || seenIds.has(rawId)) continue;
+        if (normPhone && seenPhones.has(normPhone)) continue;
+
+        seenIds.add(strId);
+        seenIds.add(rawId);
+        if (normPhone) seenPhones.add(normPhone);
+
+        const isRead = readIds.includes(strId) || readIds.includes(rawId) || Boolean(s.read);
+        unique.push({ ...s, read: isRead });
+      }
+
+      setSubmissions(unique);
     } catch (_) {
-      setSubmissions(SAMPLE_SUBMISSIONS);
+      setSubmissions([]);
     }
   };
 
   useEffect(() => {
     loadSubmissions();
-    // Poll every 15s so new site submissions appear without reload
     const interval = setInterval(loadSubmissions, 15000);
     return () => clearInterval(interval);
   }, []);
@@ -94,28 +98,57 @@ export default function FormsInboxModule({ onNavigate }) {
     localStorage.setItem(DELETED_KEY, JSON.stringify(ids));
   };
 
-  const toggleRead = (id) => {
+  const toggleRead = async (id) => {
+    const rawId = String(id).replace('sb_', '');
+    let nextState = false;
+
     setSubmissions(prev => {
       const updated = prev.map(s => {
-        if (s.id !== id) return s;
-        const next = !s.read;
-        logActivity('LEITURA_FORMULARIO', 'formularios', `${next ? 'Marcou como lido' : 'Marcou como não lido'} formulário de ${s.name}`);
-        return { ...s, read: next };
+        if (s.id !== id && s.rawId !== rawId) return s;
+        nextState = !s.read;
+        logActivity('LEITURA_FORMULARIO', 'formularios', `${nextState ? 'Marcou como lido' : 'Marcou como não lido'} formulário de ${s.name}`);
+        return { ...s, read: nextState };
       });
       const readIds = updated.filter(s => s.read).map(s => s.id);
       persistReadIds(readIds);
       return updated;
     });
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('form_submissions').update({ read: nextState }).eq('id', rawId);
+      } catch (err) {
+        console.warn('Erro ao atualizar leitura no Supabase:', err);
+      }
+    }
   };
 
-  const handleDelete = (id, name) => {
+  const handleDelete = async (id, name) => {
     if (!window.confirm(`Remover formulário de "${name}"?`)) return;
-    setSubmissions(prev => {
-      const next = prev.filter(s => s.id !== id);
-      const deletedIds = JSON.parse(localStorage.getItem(DELETED_KEY) || '[]');
-      persistDeletedIds([...deletedIds, id]);
-      return next;
-    });
+    const rawId = String(id).replace('sb_', '');
+    const deletedIds = JSON.parse(localStorage.getItem(DELETED_KEY) || '[]');
+    if (!deletedIds.includes(String(id))) deletedIds.push(String(id));
+    if (!deletedIds.includes(rawId)) deletedIds.push(rawId);
+    persistDeletedIds(deletedIds);
+
+    setSubmissions(prev => prev.filter(s => s.id !== id && s.id !== rawId && s.rawId !== rawId));
+
+    // Remove do Supabase
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('form_submissions').delete().eq('id', rawId);
+      } catch (sbErr) {
+        console.warn('Erro ao excluir no Supabase:', sbErr);
+      }
+    }
+
+    // Remove do localStorage
+    try {
+      const localForms = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      const filtered = localForms.filter(f => f.id !== id && f.id !== rawId);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+    } catch (_) {}
+
     logActivity('REMOCAO_FORMULARIO', 'formularios', `Removeu formulário de ${name}`);
   };
 

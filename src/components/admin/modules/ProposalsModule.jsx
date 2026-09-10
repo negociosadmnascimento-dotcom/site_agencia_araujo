@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   FileText, Plus, Search, Filter, MessageCircle, Copy, Check, 
-  ExternalLink, DollarSign, Calendar, Clock, ShieldCheck, X 
+  ExternalLink, DollarSign, Calendar, Clock, ShieldCheck, X, Trash2
 } from 'lucide-react';
 import WhatsAppIcon from '../../../components/icons/WhatsAppIcon';
 import { useAuth } from '../../../context/AuthContext';
@@ -14,7 +14,14 @@ export default function ProposalsModule() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const [proposals, setProposals] = useState([]);
+  const [proposals, setProposals] = useState(() => {
+    try {
+      const stored = localStorage.getItem('admin_proposals');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
 
   const [newProp, setNewProp] = useState({
     clientName: '',
@@ -30,6 +37,14 @@ export default function ProposalsModule() {
     navigator.clipboard.writeText(link);
     setCopiedId(prop.id);
     setTimeout(() => setCopiedId(null), 2500);
+  };
+
+  const handleDeleteProposal = (id, code) => {
+    if (!window.confirm(`Deseja excluir o orçamento ${code}?`)) return;
+    const next = proposals.filter(p => p.id !== id);
+    setProposals(next);
+    try { localStorage.setItem('admin_proposals', JSON.stringify(next)); } catch (_) {}
+    logActivity?.('EXCLUSAO_PROPOSTA', 'propostas', `Excluiu proposta ${code}`);
   };
 
   const handleAddProposal = (e) => {
@@ -49,10 +64,12 @@ export default function ProposalsModule() {
       status: 'Enviada',
       token: `sec_${Math.random().toString(36).substring(2, 12)}`,
       statusColor: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-      createdDate: 'Hoje',
+      createdDate: new Date().toLocaleDateString('pt-BR'),
     };
 
-    setProposals([created, ...proposals]);
+    const updated = [created, ...proposals];
+    setProposals(updated);
+    try { localStorage.setItem('admin_proposals', JSON.stringify(updated)); } catch (_) {}
     logActivity('NOVA_PROPOSTA', 'propostas', `Gerou orçamento ${propCode} no valor de ${created.amount} para ${created.clientName}`);
     setShowAddModal(false);
   };
@@ -186,6 +203,14 @@ export default function ProposalsModule() {
                 >
                   <WhatsAppIcon className="w-4 h-4 text-green-400" />
                 </a>
+
+                <button
+                  onClick={() => handleDeleteProposal(prop.id, prop.code)}
+                  title="Excluir proposta"
+                  className="p-2.5 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             </div>
           </div>

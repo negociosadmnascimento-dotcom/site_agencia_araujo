@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   DollarSign, Plus, Search, Filter, ShieldCheck, CheckCircle2, 
-  Clock, AlertCircle, Eye, EyeOff, Lock, ArrowUpRight, Download, X, RefreshCw
+  Clock, AlertCircle, Eye, EyeOff, Lock, ArrowUpRight, Download, X, RefreshCw, Trash2
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 
@@ -103,6 +103,29 @@ export default function PaymentsModule() {
     showToast("Pagamento quitado com sucesso!");
   };
 
+  const parseAmount = (val) => {
+    if (!val) return 0;
+    const clean = String(val).replace(/[^\d,-]/g, '').replace(',', '.');
+    return parseFloat(clean) || 0;
+  };
+
+  const paidPayments = payments.filter(p => p.status === 'Quitado');
+  const totalPaid = paidPayments.reduce((acc, p) => acc + parseAmount(p.amount), 0);
+
+  const pendingPayments = payments.filter(p => p.status === 'Pendente');
+  const totalPending = pendingPayments.reduce((acc, p) => acc + parseAmount(p.amount), 0);
+
+  const totalForecast = totalPaid + totalPending;
+
+  const handleDeletePayment = (id, invoice) => {
+    if (!window.confirm(`Excluir o lançamento da fatura ${invoice}?`)) return;
+    const next = payments.filter(p => p.id !== id);
+    setPayments(next);
+    try { localStorage.setItem('admin_payments', JSON.stringify(next)); } catch (_) {}
+    showToast(`Fatura ${invoice} excluída.`);
+    logActivity?.('EXCLUSAO_PAGAMENTO', 'pagamentos', `Excluiu fatura ${invoice}`);
+  };
+
   const filtered = payments.filter((p) => {
     const matchesSearch = p.clientName.toLowerCase().includes(searchTerm.toLowerCase()) || p.invoice.toLowerCase().includes(searchTerm.toLowerCase()) || (p.universalId || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'Todos' || p.status === filterStatus;
@@ -169,30 +192,36 @@ export default function PaymentsModule() {
         </span>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI Cards Dinâmicos */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="p-5 rounded-3xl bg-slate-900/70 border border-white/10">
           <span className="text-xs uppercase font-semibold text-slate-400">Total Recebido (Mês)</span>
           <p className="text-2xl font-serif font-bold text-emerald-400 mt-2">
-            {isSuperAdmin && showNumbers ? 'R$ 13.533,00' : 'R$ ••••••••'}
+            {isSuperAdmin && showNumbers ? totalPaid.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ ••••••••'}
           </p>
-          <span className="text-[10px] text-slate-500 font-mono">3 pagamentos confirmados</span>
+          <span className="text-[10px] text-slate-500 font-mono">
+            {paidPayments.length} pagamento(s) confirmado(s)
+          </span>
         </div>
 
         <div className="p-5 rounded-3xl bg-slate-900/70 border border-white/10">
           <span className="text-xs uppercase font-semibold text-slate-400">A Receber / Pendente</span>
           <p className="text-2xl font-serif font-bold text-amber-400 mt-2">
-            {isSuperAdmin && showNumbers ? 'R$ 3.200,00' : 'R$ ••••••••'}
+            {isSuperAdmin && showNumbers ? totalPending.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ ••••••••'}
           </p>
-          <span className="text-[10px] text-slate-500 font-mono">1 fatura em aberto</span>
+          <span className="text-[10px] text-slate-500 font-mono">
+            {pendingPayments.length} fatura(s) em aberto
+          </span>
         </div>
 
         <div className="p-5 rounded-3xl bg-slate-900/70 border border-white/10">
           <span className="text-xs uppercase font-semibold text-slate-400">Previsão Faturamento Total</span>
           <p className="text-2xl font-serif font-bold text-white mt-2">
-            {isSuperAdmin && showNumbers ? 'R$ 16.733,00' : 'R$ ••••••••'}
+            {isSuperAdmin && showNumbers ? totalForecast.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ ••••••••'}
           </p>
-          <span className="text-[10px] text-gold-300 font-mono">100% conciliado</span>
+          <span className="text-[10px] text-gold-300 font-mono">
+            {payments.length} lançamento(s) no total
+          </span>
         </div>
       </div>
 
@@ -274,18 +303,27 @@ export default function PaymentsModule() {
                     </span>
                   </td>
                   <td className="py-4 px-6 text-right">
-                    {pay.status === 'Pendente' ? (
+                    <div className="flex items-center justify-end gap-2">
+                      {pay.status === 'Pendente' ? (
+                        <button
+                          onClick={() => markAsPaid(pay.id)}
+                          className="px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold transition-colors"
+                        >
+                          Confirmar Baixa
+                        </button>
+                      ) : (
+                        <span className="text-[11px] font-mono text-slate-500">
+                          {pay.paidAt}
+                        </span>
+                      )}
                       <button
-                        onClick={() => markAsPaid(pay.id)}
-                        className="px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold transition-colors"
+                        onClick={() => handleDeletePayment(pay.id, pay.invoice)}
+                        title="Excluir fatura"
+                        className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 transition-colors"
                       >
-                        Confirmar Baixa
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
-                    ) : (
-                      <span className="text-[11px] font-mono text-slate-500">
-                        {pay.paidAt}
-                      </span>
-                    )}
+                    </div>
                   </td>
                 </tr>
               ))}

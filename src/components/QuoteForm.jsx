@@ -83,8 +83,11 @@ export default function QuoteForm() {
           telefone: formData.phone,
           email: formData.email || '',
           mensagem: formData.message,
-          origem: 'site',
+          origem: 'Formulário do Site (Orçamento)',
           status: 'novo',
+          etapa: 'novo',
+          valor_estimado: 'A definir',
+          observacoes: formData.message,
         }]);
       } catch (sbErr) {
         console.warn('Erro ao persistir no Supabase:', sbErr);

@@ -6,6 +6,7 @@ import {
   X, ChevronRight, Palette, CheckCircle2
 } from 'lucide-react';
 import { useAuth, DEFAULT_TENANT_SETTINGS } from '../../context/AuthContext';
+import { supabase, isSupabaseConfigured } from '../../lib/supabaseClient';
 
 // Module Components
 import DashboardModule from './modules/DashboardModule';
@@ -23,23 +24,78 @@ import PaymentsModule from './modules/PaymentsModule';
 import ContractsModule from './modules/ContractsModule';
 import CustomizationModule from './modules/CustomizationModule';
 
-export default function AdminLayout({ onBackToSite }) {
-  const { user, logout } = useAuth();
+export default function AdminLayout() {
+  const { user, logout, logActivity } = useAuth();
   const [activeModule, setActiveModule] = useState('Dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [counts, setCounts] = useState({ leads: 0, sessions: 0, forms: 0 });
 
   useEffect(() => {
-    const updateCounts = () => {
+    const updateCounts = async () => {
       try {
-        const leads = JSON.parse(localStorage.getItem('admin_leads') || '[]');
-        const siteLeads = JSON.parse(localStorage.getItem('site_form_submissions') || '[]');
-        const sessions = JSON.parse(localStorage.getItem('admin_sessions') || '[]');
+        const deletedLeadIds = JSON.parse(localStorage.getItem('admin_deleted_lead_ids') || '[]');
+        const deletedFormIds = JSON.parse(localStorage.getItem('admin_forms_deleted_ids') || '[]');
         const readIds = JSON.parse(localStorage.getItem('admin_forms_read_ids') || '[]');
+        const sessions = JSON.parse(localStorage.getItem('admin_sessions') || '[]');
         const confirmed = sessions.filter(s => (s.status || '').toLowerCase().includes('confirmado')).length;
-        const unreadForms = siteLeads.filter(s => !readIds.includes(s.id)).length;
+
+        // Leads deduplicados
+        let cloudLeads = [];
+        if (isSupabaseConfigured && supabase) {
+          try {
+            const { data } = await supabase.from('leads').select('id, telefone');
+            if (data) cloudLeads = data;
+          } catch (_) {}
+        }
+        const localLeads = JSON.parse(localStorage.getItem('admin_leads') || '[]');
+        const normalizePhone = (p) => (p || '').replace(/\D/g, '');
+        const seenPhones = new Set();
+        const seenLeadIds = new Set();
+        let leadCount = 0;
+
+        for (const l of [...cloudLeads, ...localLeads]) {
+          if (!l || !l.id) continue;
+          const idStr = String(l.id);
+          const phone = normalizePhone(l.telefone || l.phone);
+          if (deletedLeadIds.includes(idStr)) continue;
+          if (seenLeadIds.has(idStr)) continue;
+          if (phone && seenPhones.has(phone)) continue;
+          seenLeadIds.add(idStr);
+          if (phone) seenPhones.add(phone);
+          leadCount++;
+        }
+
+        // Formulários não lidos deduplicados
+        let cloudForms = [];
+        if (isSupabaseConfigured && supabase) {
+          try {
+            const { data } = await supabase.from('form_submissions').select('id, phone, read');
+            if (data) cloudForms = data;
+          } catch (_) {}
+        }
+        const localForms = JSON.parse(localStorage.getItem('site_form_submissions') || '[]');
+        const seenFormPhones = new Set();
+        const seenFormIds = new Set();
+        let unreadForms = 0;
+
+        for (const f of [...cloudForms, ...localForms]) {
+          if (!f || !f.id) continue;
+          const idStr = String(f.id);
+          const rawId = idStr.replace('sb_', '');
+          const phone = normalizePhone(f.phone);
+          if (deletedFormIds.includes(idStr) || deletedFormIds.includes(rawId)) continue;
+          if (seenFormIds.has(idStr) || seenFormIds.has(rawId)) continue;
+          if (phone && seenFormPhones.has(phone)) continue;
+          seenFormIds.add(idStr);
+          seenFormIds.add(rawId);
+          if (phone) seenFormPhones.add(phone);
+
+          const isRead = readIds.includes(idStr) || readIds.includes(rawId) || Boolean(f.read);
+          if (!isRead) unreadForms++;
+        }
+
         setCounts({
-          leads: leads.length + siteLeads.length,
+          leads: leadCount,
           sessions: confirmed,
           forms: unreadForms,
         });

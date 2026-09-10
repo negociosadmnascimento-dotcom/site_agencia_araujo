@@ -284,12 +284,15 @@ export default function ScheduleSection() {
 
         supabase.from('leads').insert([{
           nome: formData.name,
-          servico: formData.service,
+          servico: `[Agenda] ${formData.service}`,
           telefone: formData.phone,
           email: formData.email || '',
-          origem: 'agenda',
+          origem: 'Agenda Online do Site',
           status: 'novo',
+          etapa: 'novo',
+          valor_estimado: 'A definir',
           mensagem: `Data Solicitada: ${displayDateStr} às ${selectedSlot} | Locação: ${formData.location} | Obs: ${formData.notes || 'Sem observações'}`,
+          observacoes: `Data: ${displayDateStr} (${selectedSlot}) - ${formData.location}`,
         }]).then(() => {});
       } catch (sbErr) {
         console.warn('Erro ao sincronizar agendamento no Supabase:', sbErr);

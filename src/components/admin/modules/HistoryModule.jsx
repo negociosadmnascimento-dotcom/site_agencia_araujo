@@ -27,6 +27,8 @@ export default function HistoryModule() {
     return matchesSearch && matchesAdmin && matchesModule;
   });
 
+  const monitoredAdminsCount = new Set(auditLogs.map(l => l.admin_name)).size || 1;
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -67,7 +69,7 @@ export default function HistoryModule() {
 
             <div className="p-4 rounded-2xl bg-slate-900/80 border border-white/10">
               <span className="text-xs font-semibold text-slate-400 uppercase">Admins Monitorados</span>
-              <p className="text-2xl font-serif font-bold text-gold mt-1">2 Operadores</p>
+              <p className="text-2xl font-serif font-bold text-gold mt-1">{monitoredAdminsCount} Operador(es)</p>
               <span className="text-[10px] text-slate-400 font-medium">Sessões isoladas por perfil</span>
             </div>
 

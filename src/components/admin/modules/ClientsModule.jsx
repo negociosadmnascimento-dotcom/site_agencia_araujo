@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Users, Search, Plus, Filter, MessageCircle, Mail, Phone, 
-  Star, DollarSign, Calendar, MoreVertical, CheckCircle2, UserCheck, X
+  Star, DollarSign, Calendar, MoreVertical, CheckCircle2, UserCheck, X, Trash2
 } from 'lucide-react';
 import WhatsAppIcon from '../../../components/icons/WhatsAppIcon';
 import { useAuth } from '../../../context/AuthContext';
@@ -100,6 +100,29 @@ export default function ClientsModule() {
     showToast(`Cliente "${newClient.name}" cadastrado com sucesso!`);
   };
 
+  const handleDeleteClient = (id, name) => {
+    if (!window.confirm(`Remover cliente "${name}" da base de clientes?`)) return;
+    const updated = clients.filter((c) => c.id !== id);
+    persistClients(updated);
+    showToast(`Cliente "${name}" removido.`);
+  };
+
+  // Cálculos dinâmicos em tempo real a partir dos clientes reais
+  const vipCount = clients.filter(c => {
+    const spent = parseFloat((c.totalSpent || '0').replace(/[^\d,-]/g, '').replace(',', '.')) || 0;
+    return c.status === 'VIP' || spent >= 3000;
+  }).length;
+
+  const recurringCount = clients.filter(c => (Number(c.sessionsCount) || 0) > 1 || c.status === 'Recorrente').length;
+
+  const totalSpentAll = clients.reduce((acc, c) => {
+    const spent = parseFloat((c.totalSpent || '0').replace(/[^\d,-]/g, '').replace(',', '.')) || 0;
+    return acc + spent;
+  }, 0);
+
+  const avgLtv = clients.length > 0 ? (totalSpentAll / clients.length) : 0;
+  const formattedLtv = avgLtv.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
   return (
     <div className="space-y-8">
       {/* Toast */}
@@ -131,7 +154,7 @@ export default function ClientsModule() {
         </button>
       </div>
 
-      {/* KPI Stats */}
+      {/* KPI Stats Dinâmicos */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded-2xl bg-slate-900/80 border border-white/10">
           <span className="text-xs text-slate-400 uppercase font-semibold">Total de Clientes</span>
@@ -140,20 +163,24 @@ export default function ClientsModule() {
         </div>
         <div className="p-4 rounded-2xl bg-slate-900/80 border border-white/10">
           <span className="text-xs text-slate-400 uppercase font-semibold">Clientes VIP</span>
-          <p className="text-2xl font-serif font-bold text-gold mt-1">2</p>
-          <span className="text-[10px] text-slate-400 font-medium">Acima de R$ 8.000 em ensaios</span>
+          <p className="text-2xl font-serif font-bold text-gold mt-1">{vipCount}</p>
+          <span className="text-[10px] text-slate-400 font-medium">
+            {vipCount > 0 ? `${vipCount} cliente(s) acima de R$ 3.000` : 'Nenhum cliente VIP ainda'}
+          </span>
         </div>
         <div className="p-4 rounded-2xl bg-slate-900/80 border border-white/10">
           <span className="text-xs text-slate-400 uppercase font-semibold">Recorrentes</span>
-          <p className="text-2xl font-serif font-bold text-blue-400 mt-1">1</p>
-          <span className="text-[10px] text-slate-400 font-medium">Contratos mensais / trimestrais</span>
+          <p className="text-2xl font-serif font-bold text-blue-400 mt-1">{recurringCount}</p>
+          <span className="text-[10px] text-slate-400 font-medium">
+            {recurringCount > 0 ? `${recurringCount} contratos recorrentes` : 'Aguardando novas sessões'}
+          </span>
         </div>
         <div className="p-4 rounded-2xl bg-slate-900/80 border border-white/10">
           <span className="text-xs text-slate-400 uppercase font-semibold">LTV Médio (Super Admin)</span>
           <p className="text-2xl font-serif font-bold text-emerald-400 mt-1">
-            {isSuperAdmin ? 'R$ 9.680' : '••••••••'}
+            {isSuperAdmin ? formattedLtv : '••••••••'}
           </p>
-          <span className="text-[10px] text-slate-400 font-medium">Ticket médio por cliente</span>
+          <span className="text-[10px] text-slate-400 font-medium">Ticket médio real por cliente</span>
         </div>
       </div>
 
@@ -259,15 +286,24 @@ export default function ClientsModule() {
                     </span>
                   </td>
                   <td className="py-4 px-6 text-right">
-                    <a
-                      href={`https://wa.me/55${client.phone.replace(/\D/g, '')}?text=Olá%20${encodeURIComponent(client.name)},%20tudo%20bem?`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 font-semibold border border-emerald-500/30 transition-colors"
-                    >
-                      <WhatsAppIcon className="w-3.5 h-3.5 text-green-400" />
-                      <span>WhatsApp</span>
-                    </a>
+                    <div className="flex items-center justify-end gap-2">
+                      <a
+                        href={`https://wa.me/55${client.phone.replace(/\D/g, '')}?text=Olá%20${encodeURIComponent(client.name)},%20tudo%20bem?`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 font-semibold border border-emerald-500/30 transition-colors"
+                      >
+                        <WhatsAppIcon className="w-3.5 h-3.5 text-green-400" />
+                        <span>WhatsApp</span>
+                      </a>
+                      <button
+                        onClick={() => handleDeleteClient(client.id, client.name)}
+                        title="Remover cliente"
+                        className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

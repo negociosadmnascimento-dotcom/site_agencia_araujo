@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import WhatsAppIcon from '../../../components/icons/WhatsAppIcon';
 import { useAuth } from '../../../context/AuthContext';
+import { supabase, isSupabaseConfigured } from '../../../lib/supabaseClient';
 
 export default function DashboardModule({ onNavigate }) {
   const { user } = useAuth();
@@ -15,41 +16,60 @@ export default function DashboardModule({ onNavigate }) {
   const [recentLeads, setRecentLeads] = useState([]);
 
   useEffect(() => {
-    const update = () => {
+    const update = async () => {
       try {
-        const leads = JSON.parse(localStorage.getItem('admin_leads') || '[]');
-        const siteLeads = JSON.parse(localStorage.getItem('site_form_submissions') || '[]');
-        const readIds = JSON.parse(localStorage.getItem('admin_forms_read_ids') || '[]');
+        const deletedLeadIds = JSON.parse(localStorage.getItem('admin_deleted_lead_ids') || '[]');
         const sessions = JSON.parse(localStorage.getItem('admin_sessions') || '[]');
 
-        setLeadCount(leads.length + siteLeads.length);
-        setUnreadForms(siteLeads.filter(s => !readIds.includes(s.id)).length);
+        let cloudLeads = [];
+        if (isSupabaseConfigured && supabase) {
+          try {
+            const { data } = await supabase.from('leads').select('*').order('criado_em', { ascending: false });
+            if (data && data.length > 0) {
+              cloudLeads = data.map(r => ({
+                id: r.id,
+                name: r.nome || '',
+                service: r.servico || 'Orçamento do Site',
+                phone: r.telefone || '',
+                date: r.criado_em ? new Date(r.criado_em).toLocaleDateString('pt-BR') : 'Hoje',
+                source: r.origem || 'Site',
+                stage: r.status || r.etapa || 'novo',
+              }));
+            }
+          } catch (_) {}
+        }
 
-        // Sessões reais da agenda (até 3)
-        setUpcomingSessions(sessions.slice(0, 3));
+        const localLeads = JSON.parse(localStorage.getItem('admin_leads') || '[]');
+        const normalizePhone = (p) => (p || '').replace(/\D/g, '');
+        const seenPhones = new Set();
+        const seenIds = new Set();
+        const validLeads = [];
 
-        // Leads reais (até 3)
-        const combinedLeads = [
-          ...leads.map(l => ({
+        for (const l of [...cloudLeads, ...localLeads]) {
+          if (!l || !l.id) continue;
+          const strId = String(l.id);
+          const phone = normalizePhone(l.phone);
+          if (deletedLeadIds.includes(strId)) continue;
+          if (seenIds.has(strId)) continue;
+          if (phone && seenPhones.has(phone)) continue;
+
+          seenIds.add(strId);
+          if (phone) seenPhones.add(phone);
+
+          validLeads.push({
             name: l.name,
             service: l.service,
             phone: l.phone,
             time: l.date || 'Hoje',
-            source: l.source || 'CRM',
+            source: l.source || 'Site',
             status: l.stage === 'fechado' ? 'Fechado' : l.stage === 'contato' ? 'Atendimento' : 'Novo Lead',
             statusColor: l.stage === 'fechado' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-          })),
-          ...siteLeads.map(s => ({
-            name: s.name,
-            service: s.service,
-            phone: s.phone,
-            time: s.createdAt || 'Hoje',
-            source: 'Formulário Site',
-            status: 'Novo Lead',
-            statusColor: 'bg-gold/20 text-gold-300 border-gold/30',
-          }))
-        ];
-        setRecentLeads(combinedLeads.slice(0, 3));
+          });
+        }
+
+        setLeadCount(validLeads.length);
+        setRecentLeads(validLeads.slice(0, 3));
+        setUpcomingSessions(sessions.slice(0, 3));
       } catch (_) {}
     };
     update();
