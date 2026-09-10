@@ -31,10 +31,67 @@ export default function ScheduleModule() {
   const [filterStatus, setFilterStatus] = useState('Todos');
   const [toast, setToast] = useState(null);
   const [sessions, setSessions] = useState([]);
+  const [pendingReminders, setPendingReminders] = useState([]);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  // Carrega lembretes de clientes que concluíram a esteira e aguardam agendamento
+  const loadPendingReminders = () => {
+    try {
+      const storedSessions = JSON.parse(localStorage.getItem(SESSIONS_STORAGE_KEY) || '[]');
+      const contracts = JSON.parse(localStorage.getItem('admin_contracts') || '[]');
+      const explicitPending = JSON.parse(localStorage.getItem('admin_pending_schedules') || '[]');
+      const dismissed = JSON.parse(localStorage.getItem('admin_dismissed_schedule_reminders') || '[]');
+
+      const scheduledUids = new Set(storedSessions.map(s => s.universalId).filter(Boolean));
+      const scheduledNames = new Set(storedSessions.map(s => (s.client || '').toLowerCase().trim()));
+
+      const list = [];
+      const seen = new Set();
+
+      for (const p of explicitPending) {
+        if (!p || !p.clientName) continue;
+        const uid = p.universalId || p.id;
+        if (dismissed.includes(uid)) continue;
+        if (scheduledUids.has(uid) || scheduledNames.has((p.clientName || '').toLowerCase().trim())) continue;
+        if (seen.has(uid)) continue;
+        seen.add(uid);
+        list.push({
+          ...p,
+          uid,
+          sourceType: 'pipeline',
+        });
+      }
+
+      for (const ctr of contracts) {
+        if (!ctr || !ctr.clientName) continue;
+        const uid = ctr.universalId || ctr.contractNumber;
+        if (dismissed.includes(uid)) continue;
+        if (scheduledUids.has(uid) || scheduledNames.has((ctr.clientName || '').toLowerCase().trim())) continue;
+        if (seen.has(uid)) continue;
+        seen.add(uid);
+        list.push({
+          id: `rem_ctr_${ctr.id}`,
+          uid,
+          universalId: ctr.universalId || ctr.contractNumber,
+          clientName: ctr.clientName,
+          phone: ctr.phone || '',
+          service: ctr.serviceTitle || 'Prestação de Serviços Fotográficos',
+          depositAmount: ctr.depositAmount || 'R$ 0,00',
+          remainingAmount: ctr.remainingAmount || ctr.totalAmount,
+          contractNumber: ctr.contractNumber,
+          token: ctr.token,
+          sourceType: 'contract',
+        });
+      }
+
+      setPendingReminders(list);
+    } catch (e) {
+      console.warn('Erro ao carregar lembretes de agendamento:', e);
+    }
   };
 
   // Carrega e sincroniza sessões do localStorage
@@ -50,17 +107,16 @@ export default function ScheduleModule() {
     } catch {
       setSessions(DEFAULT_SESSIONS);
     }
+    loadPendingReminders();
   };
 
   useEffect(() => {
     loadSessions();
     const handleStorage = (e) => {
-      if (e.key === SESSIONS_STORAGE_KEY) {
-        loadSessions();
-      }
+      loadSessions();
     };
     window.addEventListener('storage', handleStorage);
-    const interval = setInterval(loadSessions, 10000);
+    const interval = setInterval(loadSessions, 6000);
     return () => {
       window.removeEventListener('storage', handleStorage);
       clearInterval(interval);
@@ -75,7 +131,35 @@ export default function ScheduleModule() {
     type: 'Retratos Pessoais',
     location: 'Studio Barra da Tijuca, RJ',
     equipment: 'Kit Padrão Mirrorless Full Frame + Lentes Prime',
+    universalId: '',
   });
+
+  const handleStartScheduleForReminder = (rem) => {
+    setNewSession({
+      date: '',
+      time: '16:30 - 18:30',
+      client: rem.clientName,
+      phone: rem.phone || '',
+      type: rem.service || 'Retratos Pessoais',
+      location: 'Studio Barra da Tijuca, RJ',
+      equipment: 'Kit Padrão Mirrorless Full Frame + Lentes Prime',
+      universalId: rem.universalId || rem.uid,
+    });
+    setShowAddModal(true);
+  };
+
+  const handleDismissReminder = (uid) => {
+    try {
+      const dismissed = JSON.parse(localStorage.getItem('admin_dismissed_schedule_reminders') || '[]');
+      if (!dismissed.includes(uid)) {
+        dismissed.push(uid);
+        localStorage.setItem('admin_dismissed_schedule_reminders', JSON.stringify(dismissed));
+      }
+      loadPendingReminders();
+      showToast('Lembrete arquivado da fila de agendamento.', 'info');
+      window.dispatchEvent(new Event('storage'));
+    } catch (_) {}
+  };
 
   const handleAddSession = (e) => {
     e.preventDefault();
@@ -83,6 +167,7 @@ export default function ScheduleModule() {
 
     const sessionObj = {
       id: `sess_${Date.now()}`,
+      universalId: newSession.universalId || '',
       date: newSession.date || 'Em breve',
       time: newSession.time,
       client: newSession.client,
@@ -101,9 +186,21 @@ export default function ScheduleModule() {
     setSessions(updated);
     localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(updated));
 
+    // Remove do pending se veio de lembrete
+    if (newSession.universalId) {
+      try {
+        const explicitPending = JSON.parse(localStorage.getItem('admin_pending_schedules') || '[]');
+        const updatedPending = explicitPending.filter(p => p.universalId !== newSession.universalId);
+        localStorage.setItem('admin_pending_schedules', JSON.stringify(updatedPending));
+      } catch (_) {}
+    }
+
+    loadPendingReminders();
+    window.dispatchEvent(new Event('storage'));
+
     setShowAddModal(false);
-    showToast(`Sessão de "${newSession.client}" adicionada e sincronizada na agenda pública!`);
-    logActivity?.('AGENDA_NOVA_SESSAO', 'agenda', `Agendou sessão para ${sessionObj.client} em ${sessionObj.date}`);
+    showToast(`Sessão de "${newSession.client}" agendada! Ciclo da esteira concluído com sucesso.`);
+    logActivity?.('AGENDA_NOVA_SESSAO', 'agenda', `Agendou sessão para ${sessionObj.client} [${sessionObj.universalId || 'Manual'}] em ${sessionObj.date}`);
 
     setNewSession({
       date: '',
@@ -113,6 +210,7 @@ export default function ScheduleModule() {
       type: 'Retratos Pessoais',
       location: 'Studio Barra da Tijuca, RJ',
       equipment: 'Kit Padrão Mirrorless Full Frame + Lentes Prime',
+      universalId: '',
     });
   };
 
@@ -183,6 +281,92 @@ export default function ScheduleModule() {
         </div>
       </div>
 
+      {/* Lembretes da Esteira Comercial (Última Etapa: Agendamento do Ensaio) */}
+      {pendingReminders.length > 0 && (
+        <div className="p-5 rounded-3xl bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-slate-900 border border-amber-500/30 space-y-4 shadow-xl">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
+              <h2 className="text-sm font-bold text-amber-300 font-serif">
+                Última Etapa da Esteira • Aguardando Agendamento ({pendingReminders.length})
+              </h2>
+            </div>
+            <span className="text-[10px] font-mono font-bold text-amber-300 bg-amber-500/20 px-3 py-1 rounded-full border border-amber-500/40 animate-pulse">
+              {pendingReminders.length === 1 ? '1 Cliente para Agendar' : `${pendingReminders.length} Clientes para Agendar`}
+            </span>
+          </div>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            Estes clientes concluíram as etapas comerciais anteriores (<strong>Lead ➔ Fechado ➔ Pagamento/Sinal ➔ Emissão de Contrato ➔ CRM</strong>) e estão aguardando a definição da data e horário do ensaio para execução.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+            {pendingReminders.map((rem) => (
+              <div 
+                key={rem.id}
+                className="p-4 rounded-2xl bg-black/60 border border-white/10 hover:border-amber-500/40 transition-all flex flex-col justify-between gap-3 shadow-lg"
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="font-bold text-white text-sm block">{rem.clientName}</span>
+                      <span className="text-xs text-gold-300 font-medium">{rem.service}</span>
+                    </div>
+                    <span className="font-mono text-[9px] font-bold text-gold/90 bg-gold/10 border border-gold/20 px-2 py-0.5 rounded">
+                      {rem.universalId}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400 mt-2">
+                    {rem.depositAmount && rem.depositAmount !== 'R$ 0,00' && (
+                      <span className="text-cyan-300 font-mono">
+                        Sinal: <strong>{rem.depositAmount}</strong>
+                      </span>
+                    )}
+                    {rem.contractNumber && (
+                      <span className="text-slate-400 font-mono">
+                        Contrato: {rem.contractNumber}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/5">
+                  {rem.phone && (
+                    <a
+                      href={`https://wa.me/55${rem.phone.replace(/\D/g, '')}?text=Olá%20${encodeURIComponent(rem.clientName)}!%20Seu%20contrato%20e%20sinal%20foram%20confirmados%20na%20Agências%20Araújo.%20Vamos%20definir%20o%20dia%20e%20melhor%20horário%20para%20o%20seu%20ensaio?`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                      title="Combinar data via WhatsApp"
+                    >
+                      <WhatsAppIcon className="w-3.5 h-3.5 text-green-400" />
+                      <span>WhatsApp</span>
+                    </a>
+                  )}
+
+                  <div className="flex items-center gap-2 ml-auto">
+                    <button
+                      onClick={() => handleDismissReminder(rem.universalId || rem.uid)}
+                      className="text-[11px] text-slate-400 hover:text-slate-200 px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition-colors"
+                      title="Ocultar lembrete"
+                    >
+                      Ocultar
+                    </button>
+                    <button
+                      onClick={() => handleStartScheduleForReminder(rem)}
+                      className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-dark-950 text-xs font-bold uppercase tracking-wider shadow-md shadow-amber-500/20 flex items-center gap-1.5 transition-all"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Agendar Sessão</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Filter Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
         {['Todos', 'Confirmado', 'Pendente Sinal', 'Em Edição', 'Cancelado'].map((st) => (
@@ -223,6 +407,12 @@ export default function ScheduleModule() {
                   ) : (
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-mono text-slate-400 bg-white/5 border border-white/10">
                       Painel Interno
+                    </span>
+                  )}
+
+                  {sess.universalId && (
+                    <span className="font-mono text-[9px] font-bold text-gold/90 bg-gold/10 border border-gold/20 px-2 py-0.5 rounded">
+                      {sess.universalId}
                     </span>
                   )}
                 </div>
@@ -323,7 +513,19 @@ export default function ScheduleModule() {
             </button>
 
             <h2 className="text-xl font-serif font-bold text-white mb-1">Agendar Nova Sessão</h2>
-            <p className="text-xs text-slate-400 mb-6">Cadastre o ensaio fotográfico e bloqueie o horário no site público</p>
+            <p className="text-xs text-slate-400 mb-4">Cadastre o ensaio fotográfico e bloqueie o horário no site público</p>
+
+            {newSession.universalId && (
+              <div className="mb-4 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                  <span className="text-xs text-amber-300 font-semibold">Esteira Comercial • Etapa Final de Agendamento</span>
+                </div>
+                <span className="font-mono text-xs font-bold text-gold bg-gold/10 px-2.5 py-1 rounded border border-gold/30">
+                  {newSession.universalId}
+                </span>
+              </div>
+            )}
 
             <form onSubmit={handleAddSession} className="space-y-4">
               <div>

@@ -94,16 +94,53 @@ export default function AdminLayout({ onBackToSite }) {
           if (!isRead) unreadForms++;
         }
 
+        // Lembrete da Esteira: Clientes que concluíram a contratação mas ainda não têm data agendada
+        const contracts = JSON.parse(localStorage.getItem('admin_contracts') || '[]');
+        const explicitPending = JSON.parse(localStorage.getItem('admin_pending_schedules') || '[]');
+        const dismissedReminders = JSON.parse(localStorage.getItem('admin_dismissed_schedule_reminders') || '[]');
+
+        const scheduledUids = new Set(sessions.map(s => s.universalId).filter(Boolean));
+        const scheduledNames = new Set(sessions.map(s => (s.client || '').toLowerCase().trim()));
+
+        const pendingReminders = [];
+        const seenScheduleUids = new Set();
+
+        for (const p of explicitPending) {
+          if (!p || !p.clientName) continue;
+          const uid = p.universalId || p.id;
+          if (dismissedReminders.includes(uid)) continue;
+          if (scheduledUids.has(uid) || scheduledNames.has((p.clientName || '').toLowerCase().trim())) continue;
+          if (seenScheduleUids.has(uid)) continue;
+          seenScheduleUids.add(uid);
+          pendingReminders.push(p);
+        }
+
+        for (const ctr of contracts) {
+          if (!ctr || !ctr.clientName) continue;
+          const uid = ctr.universalId || ctr.contractNumber;
+          if (dismissedReminders.includes(uid)) continue;
+          if (scheduledUids.has(uid) || scheduledNames.has((ctr.clientName || '').toLowerCase().trim())) continue;
+          if (seenScheduleUids.has(uid)) continue;
+          seenScheduleUids.add(uid);
+          pendingReminders.push(ctr);
+        }
+
         setCounts({
           leads: leadCount,
           sessions: confirmed,
           forms: unreadForms,
+          pendingSchedule: pendingReminders.length,
         });
       } catch (_) {}
     };
     updateCounts();
-    const interval = setInterval(updateCounts, 8000);
-    return () => clearInterval(interval);
+    const handleStorage = () => updateCounts();
+    window.addEventListener('storage', handleStorage);
+    const interval = setInterval(updateCounts, 5000);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      clearInterval(interval);
+    };
   }, []);
 
   // The 13 photography tenant modules + Customization
@@ -130,8 +167,12 @@ export default function AdminLayout({ onBackToSite }) {
           id: 'agenda', 
           label: 'Agenda de Ensaios', 
           icon: Calendar, 
-          badge: counts.sessions > 0 ? `${counts.sessions} confirmados` : null, 
-          badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' 
+          badge: counts.pendingSchedule > 0 
+            ? `${counts.pendingSchedule} a agendar` 
+            : (counts.sessions > 0 ? `${counts.sessions} confirmados` : null), 
+          badgeColor: counts.pendingSchedule > 0 
+            ? 'bg-amber-500/25 text-amber-300 border-amber-500/50 shadow-sm shadow-amber-500/20 animate-pulse font-bold' 
+            : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' 
         },
         { id: 'propostas', label: 'Propostas Comerciais', icon: FileText },
         { id: 'WhatsApp', label: 'WhatsApp', icon: MessageCircle, badge: 'Online', badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
@@ -291,7 +332,7 @@ export default function AdminLayout({ onBackToSite }) {
                     </div>
 
                     {item.badge && (
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white/[0.05] border border-white/10 text-slate-300">
+                      <span className={`text-[10px] font-mono px-2 py-0.5 rounded-md border ${item.badgeColor || 'bg-white/[0.05] border-white/10 text-slate-300'}`}>
                         {item.badge}
                       </span>
                     )}

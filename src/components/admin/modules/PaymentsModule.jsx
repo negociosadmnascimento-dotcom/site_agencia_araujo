@@ -93,7 +93,46 @@ export default function PaymentsModule() {
         contracts.unshift(newContract);
         localStorage.setItem('admin_contracts', JSON.stringify(contracts));
         logActivity?.('AUTO_CONTRATO', 'contratos', `Contrato ${ctrNum} emitido automaticamente após confirmação financeira [${newContract.universalId}]`);
+
+        // ── Última Etapa da Esteira: Dispara lembrete para a Agenda de Ensaios ──
+        try {
+          const pendingList = JSON.parse(localStorage.getItem('admin_pending_schedules') || '[]');
+          if (!pendingList.some(item => item.universalId === newContract.universalId)) {
+            pendingList.unshift({
+              id: `sched_rem_${Date.now()}`,
+              universalId: newContract.universalId,
+              clientName: newContract.clientName,
+              phone: newContract.phone,
+              service: newContract.serviceTitle,
+              depositAmount: newContract.depositAmount,
+              contractNumber: newContract.contractNumber,
+              createdAt: new Date().toISOString(),
+            });
+            localStorage.setItem('admin_pending_schedules', JSON.stringify(pendingList));
+            window.dispatchEvent(new Event('storage'));
+          }
+        } catch (_) {}
+
         return newContract;
+      } else {
+        // Se o contrato já existia, garante que o lembrete de agendamento esteja ativo
+        try {
+          const pendingList = JSON.parse(localStorage.getItem('admin_pending_schedules') || '[]');
+          if (!pendingList.some(item => item.universalId === targetUid)) {
+            pendingList.unshift({
+              id: `sched_rem_${Date.now()}`,
+              universalId: targetUid,
+              clientName: pay.clientName,
+              phone: pay.phone,
+              service: pay.description || 'Ensaio Fotográfico',
+              depositAmount: pay.depositAmount || 'R$ 0,00',
+              contractNumber: contracts.find(c => c.universalId === targetUid)?.contractNumber || 'Contrato Ativo',
+              createdAt: new Date().toISOString(),
+            });
+            localStorage.setItem('admin_pending_schedules', JSON.stringify(pendingList));
+            window.dispatchEvent(new Event('storage'));
+          }
+        } catch (_) {}
       }
     } catch (err) {
       console.error('Erro ao gerar contrato automático:', err);
@@ -198,61 +237,66 @@ export default function PaymentsModule() {
 
   // ── Confirmar Baixa do Sinal com Disparo de Contrato ───────────────────────
   const handleConfirmDeposit = (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (!depositTargetPay) return;
 
-    const finalDepStr = depositInput.trim()
-      ? (depositInput.trim().startsWith('R$') ? depositInput.trim() : `R$ ${depositInput.trim()}`)
-      : 'R$ 0,00';
-    const totalVal = parseAmount(depositTargetPay.amount);
-    const depVal = parseAmount(finalDepStr);
-    const remVal = Math.max(0, totalVal - depVal);
-    const remStr = formatCurrency(remVal);
-
-    const isFullyPaid = remVal === 0;
-    const newStatus = isFullyPaid ? 'Quitado' : 'Sinal Quitado';
-    const newColor = isFullyPaid 
-      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-      : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30';
-    const nowStr = new Date().toLocaleDateString('pt-BR');
-
-    let updatedTarget = null;
-    setPayments(prev => {
-      const next = prev.map(p => {
-        if (p.id === depositTargetPay.id) {
-          updatedTarget = {
-            ...p,
-            depositAmount: finalDepStr,
-            remainingAmount: remStr,
-            method: depositMethod,
-            status: newStatus,
-            paidAt: `${newStatus} em ${nowStr}`,
-            statusColor: newColor,
-          };
-          return updatedTarget;
-        }
-        return p;
-      });
-      try { localStorage.setItem('admin_payments', JSON.stringify(next)); } catch (_) {}
-      return next;
-    });
-
-    logActivity('BAIXA_SINAL', 'pagamentos', `Confirmou sinal de ${finalDepStr} da fatura ${depositTargetPay.invoice} (${depositTargetPay.clientName})`);
-
-    // Disparo automático do Contrato
-    const createdCtr = triggerAutoContract(updatedTarget || {
-      ...depositTargetPay,
-      depositAmount: finalDepStr,
-      remainingAmount: remStr,
-    });
-
+    const targetPay = depositTargetPay;
     setDepositModalOpen(false);
     setDepositTargetPay(null);
 
-    if (createdCtr) {
-      showToast(`Sinal de ${finalDepStr} confirmado! Contrato ${createdCtr.contractNumber} emitido com ID "${depositTargetPay.universalId}".`);
-    } else {
-      showToast(`Sinal de ${finalDepStr} confirmado com sucesso!`);
+    try {
+      const finalDepStr = depositInput.trim()
+        ? (depositInput.trim().startsWith('R$') ? depositInput.trim() : `R$ ${depositInput.trim()}`)
+        : 'R$ 0,00';
+      const totalVal = parseAmount(targetPay.amount);
+      const depVal = parseAmount(finalDepStr);
+      const remVal = Math.max(0, totalVal - depVal);
+      const remStr = formatCurrency(remVal);
+
+      const isFullyPaid = remVal === 0;
+      const newStatus = isFullyPaid ? 'Quitado' : 'Sinal Quitado';
+      const newColor = isFullyPaid 
+        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+        : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30';
+      const nowStr = new Date().toLocaleDateString('pt-BR');
+
+      let updatedTarget = null;
+      setPayments(prev => {
+        const next = prev.map(p => {
+          if (p.id === targetPay.id) {
+            updatedTarget = {
+              ...p,
+              depositAmount: finalDepStr,
+              remainingAmount: remStr,
+              method: depositMethod,
+              status: newStatus,
+              paidAt: `${newStatus} em ${nowStr}`,
+              statusColor: newColor,
+            };
+            return updatedTarget;
+          }
+          return p;
+        });
+        try { localStorage.setItem('admin_payments', JSON.stringify(next)); } catch (_) {}
+        return next;
+      });
+
+      logActivity?.('BAIXA_SINAL', 'pagamentos', `Confirmou sinal de ${finalDepStr} da fatura ${targetPay.invoice} (${targetPay.clientName})`);
+
+      // Disparo automático do Contrato
+      const createdCtr = triggerAutoContract(updatedTarget || {
+        ...targetPay,
+        depositAmount: finalDepStr,
+        remainingAmount: remStr,
+      });
+
+      if (createdCtr) {
+        showToast(`Sinal de ${finalDepStr} confirmado! Contrato ${createdCtr.contractNumber} emitido com ID "${targetPay.universalId}".`);
+      } else {
+        showToast(`Sinal de ${finalDepStr} confirmado com sucesso!`);
+      }
+    } catch (err) {
+      console.error('Erro ao confirmar sinal:', err);
     }
   };
 
@@ -262,7 +306,7 @@ export default function PaymentsModule() {
     setPayments(prev => {
       const next = prev.map(p => {
         if (p.id === id) {
-          logActivity('BAIXA_PAGAMENTO', 'pagamentos', `Confirmou quitação da fatura ${p.invoice} de ${p.clientName}`);
+          logActivity?.('BAIXA_PAGAMENTO', 'pagamentos', `Confirmou quitação da fatura ${p.invoice} de ${p.clientName}`);
           updatedTarget = { 
             ...p, 
             depositAmount: p.amount,
@@ -657,6 +701,7 @@ export default function PaymentsModule() {
                 </button>
                 <button
                   type="submit"
+                  onClick={handleConfirmDeposit}
                   className="px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-dark-950 font-bold text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/20 transition-all"
                 >
                   Confirmar Baixa & Emitir Contrato
