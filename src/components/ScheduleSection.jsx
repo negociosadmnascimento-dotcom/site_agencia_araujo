@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import WhatsAppIcon from './icons/WhatsAppIcon';
 import { CONTACT_INFO } from '../config/contact';
+import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 
 const SESSIONS_STORAGE_KEY = 'admin_sessions';
 
@@ -265,6 +266,37 @@ export default function ScheduleSection() {
       source: 'Site Oficial (Agenda)',
       createdAt: new Date().toISOString(),
     };
+
+    // Gravação direta na nuvem (Supabase) para sincronização multi-dispositivo
+    if (isSupabaseConfigured && supabase) {
+      try {
+        supabase.from('form_submissions').insert([{
+          name: formData.name,
+          email: formData.email || '',
+          phone: formData.phone,
+          service: `[Agenda] ${formData.service}`,
+          event_date: `${displayDateStr} (${selectedSlot})`,
+          message: `Solicitação de agendamento de ensaio para ${displayDateStr} às ${selectedSlot} em ${formData.location}. ${formData.notes || ''}`,
+          tenant_id: 'tenant_001',
+          read: false,
+          source: 'Agenda Online',
+        }]).then(() => {});
+
+        supabase.from('leads').insert([{
+          nome: formData.name,
+          servico: formData.service,
+          telefone: formData.phone,
+          email: formData.email || '',
+          origem: 'Agenda Online do Site',
+          etapa: 'novo',
+          valor_estimado: 'A definir',
+          observacoes: `Data Solicitada: ${displayDateStr} às ${selectedSlot} | Locação: ${formData.location}`,
+          tenant_id: 'tenant_001',
+        }]).then(() => {});
+      } catch (sbErr) {
+        console.warn('Erro ao sincronizar agendamento no Supabase:', sbErr);
+      }
+    }
 
     setTimeout(() => {
       try {

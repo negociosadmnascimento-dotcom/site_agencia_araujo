@@ -19,7 +19,41 @@ export default function ClientsModule() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const [clients, setClients] = useState([]);
+  const INITIAL_CLIENTS = [
+    {
+      id: 'cli_nicoly_0909',
+      name: 'Nicoly Gomes de Castro',
+      role: 'Cliente Particular',
+      category: 'Retratos Pessoais',
+      email: 'nicolygomes021@gmail.com',
+      phone: '(21) 97553-0689',
+      totalSpent: 'R$ 0,00',
+      sessionsCount: 0,
+      status: 'Em Prospecção',
+      lastSession: 'Pendente (Previsto Nov/26)',
+      notes: 'Ensaio Gestante & Família em estúdio com namorado. Contato via WhatsApp em 09/09.',
+    }
+  ];
+
+  const [clients, setClients] = useState(() => {
+    try {
+      const stored = localStorage.getItem('admin_clients');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.length > 0) return parsed;
+      }
+      return INITIAL_CLIENTS;
+    } catch {
+      return INITIAL_CLIENTS;
+    }
+  });
+
+  const persistClients = (newClients) => {
+    setClients(newClients);
+    try {
+      localStorage.setItem('admin_clients', JSON.stringify(newClients));
+    } catch (_) {}
+  };
 
   const [newClient, setNewClient] = useState({
     name: '',
@@ -44,7 +78,7 @@ export default function ClientsModule() {
   const handleAddClient = (e) => {
     e.preventDefault();
     if (!newClient.name) return;
-    setClients([
+    const updated = [
       ...clients,
       {
         id: `cli_${Date.now()}`,
@@ -59,7 +93,8 @@ export default function ClientsModule() {
         lastSession: 'Pendente',
         notes: newClient.notes || '',
       }
-    ]);
+    ];
+    persistClients(updated);
     setNewClient({ name: '', role: '', category: 'Retratos Pessoais', email: '', phone: '', notes: '' });
     setShowAddModal(false);
     showToast(`Cliente "${newClient.name}" cadastrado com sucesso!`);

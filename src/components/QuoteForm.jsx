@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Send, CheckCircle2, Mail, Phone, User, Calendar, FileText, Sparkles, Clock, AlertCircle } from 'lucide-react';
 import WhatsAppIcon from './icons/WhatsAppIcon';
 import { CONTACT_INFO } from '../config/contact';
+import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 
 export default function QuoteForm() {
   const [formData, setFormData] = useState({
@@ -38,7 +39,7 @@ export default function QuoteForm() {
     setFormData({ ...formData, [name]: value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
 
@@ -60,6 +61,37 @@ export default function QuoteForm() {
       `_Aguardo o retorno para produzir registros extraordinários!_`;
 
     const whatsappUrl = `https://wa.me/${CONTACT_INFO.whatsapp.number}?text=${encodeURIComponent(template1)}`;
+
+    // 1. Gravação direta na nuvem (Supabase) para sincronização multi-dispositivo
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('form_submissions').insert([{
+          name: formData.name,
+          email: formData.email || '',
+          phone: formData.phone,
+          service: formData.service,
+          event_date: formData.date || 'A combinar',
+          message: formData.message,
+          tenant_id: 'tenant_001',
+          read: false,
+          source: 'Formulário do Site',
+        }]);
+
+        await supabase.from('leads').insert([{
+          nome: formData.name,
+          servico: formData.service,
+          telefone: formData.phone,
+          email: formData.email || '',
+          origem: 'Formulário do Site (Orçamento)',
+          etapa: 'novo',
+          valor_estimado: 'A definir',
+          observacoes: `[Orçamento]: ${formData.message} | Data solicitada: ${formData.date || 'A combinar'}`,
+          tenant_id: 'tenant_001',
+        }]);
+      } catch (sbErr) {
+        console.warn('Erro ao persistir no Supabase:', sbErr);
+      }
+    }
 
     setTimeout(() => {
       setIsSubmitting(false);

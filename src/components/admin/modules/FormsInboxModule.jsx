@@ -5,12 +5,26 @@ import {
 } from 'lucide-react';
 import WhatsAppIcon from '../../../components/icons/WhatsAppIcon';
 import { useAuth } from '../../../context/AuthContext';
+import { supabase, isSupabaseConfigured } from '../../../lib/supabaseClient';
 
 const STORAGE_KEY = 'site_form_submissions';
 const READ_KEY = 'admin_forms_read_ids';
 const DELETED_KEY = 'admin_forms_deleted_ids';
 
-const SAMPLE_SUBMISSIONS = [];
+const SAMPLE_SUBMISSIONS = [
+  {
+    id: 'sub_nicoly_0909',
+    name: 'Nicoly Gomes de Castro',
+    email: 'nicolygomes021@gmail.com',
+    phone: '(21) 97553-0689',
+    service: 'Gestante & Família',
+    eventDate: 'Novembro / 2026',
+    message: '2 pessoas (gestante e namorado), seriam fotos em estúdio',
+    createdAt: '09/09/2026, 14:02',
+    read: false,
+    source: 'Formulário do Site',
+  }
+];
 
 export default function FormsInboxModule({ onNavigate }) {
   const { logActivity } = useAuth();
@@ -18,17 +32,48 @@ export default function FormsInboxModule({ onNavigate }) {
   const [filterRead, setFilterRead] = useState('Todos');
   const [submissions, setSubmissions] = useState([]);
 
-  const loadSubmissions = () => {
+  const loadSubmissions = async () => {
     try {
       const readIds = JSON.parse(localStorage.getItem(READ_KEY) || '[]');
       const deletedIds = JSON.parse(localStorage.getItem(DELETED_KEY) || '[]');
+      let cloudSubmissions = [];
+
+      if (isSupabaseConfigured && supabase) {
+        try {
+          const { data, error } = await supabase
+            .from('form_submissions')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+          if (!error && data && data.length > 0) {
+            cloudSubmissions = data.map(r => ({
+              id: 'sb_' + r.id,
+              name: r.name,
+              email: r.email || '',
+              phone: r.phone,
+              service: r.service || 'Orçamento do Site',
+              eventDate: r.event_date || 'A combinar',
+              message: r.message,
+              createdAt: r.created_at ? new Date(r.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'Hoje',
+              read: r.read || false,
+              source: r.source || 'Formulário do Site (Cloud)',
+            }));
+          }
+        } catch (sbErr) {
+          console.warn('Supabase fetch forms fallback:', sbErr);
+        }
+      }
+
       const real = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      const uniqueMap = new Map();
 
-      const allEntries = [...real, ...SAMPLE_SUBMISSIONS]
-        .filter(s => !deletedIds.includes(s.id))
-        .map(s => ({ ...s, read: readIds.includes(s.id) ? true : s.read }));
+      [...cloudSubmissions, ...real, ...SAMPLE_SUBMISSIONS].forEach(s => {
+        if (!deletedIds.includes(s.id) && !uniqueMap.has(s.id) && !uniqueMap.has(s.phone)) {
+          uniqueMap.set(s.id, { ...s, read: readIds.includes(s.id) ? true : s.read });
+        }
+      });
 
-      setSubmissions(allEntries);
+      setSubmissions(Array.from(uniqueMap.values()));
     } catch (_) {
       setSubmissions(SAMPLE_SUBMISSIONS);
     }

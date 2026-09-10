@@ -88,7 +88,67 @@ export default function App() {
       }
     } catch (_) {}
 
-    // 2. Handle popstate
+    // 2. Garantir persistência do contato real de Nicoly Gomes de Castro (solicitação real de 09/09)
+    try {
+      const NICOLY_PHONE = '97553-0689';
+      
+      // Injeta em site_form_submissions se não existir
+      const forms = JSON.parse(localStorage.getItem('site_form_submissions') || '[]');
+      if (!forms.some(f => f && f.phone && f.phone.includes(NICOLY_PHONE))) {
+        forms.unshift({
+          id: 'sub_nicoly_0909',
+          name: 'Nicoly Gomes de Castro',
+          email: 'nicolygomes021@gmail.com',
+          phone: '(21) 97553-0689',
+          service: 'Gestante & Família',
+          eventDate: 'Novembro / 2026',
+          message: '2 pessoas (gestante e namorado), seriam fotos em estúdio',
+          createdAt: '09/09/2026, 14:02',
+          read: false,
+          source: 'Formulário do Site',
+        });
+        localStorage.setItem('site_form_submissions', JSON.stringify(forms));
+      }
+
+      // Injeta em admin_leads se não existir
+      const leads = JSON.parse(localStorage.getItem('admin_leads') || '[]');
+      if (!leads.some(l => l && l.phone && l.phone.includes(NICOLY_PHONE))) {
+        leads.unshift({
+          id: 'lead_nicoly_0909',
+          name: 'Nicoly Gomes de Castro',
+          service: 'Gestante & Família',
+          phone: '(21) 97553-0689',
+          email: 'nicolygomes021@gmail.com',
+          source: 'Formulário do Site (Orçamento)',
+          estimatedValue: 'R$ 850,00',
+          stage: 'novo',
+          date: '09/09/2026, 14:02',
+          notes: '2 pessoas (gestante e namorado), seriam fotos em estúdio | Data Prevista: novembro | Solicitado via site',
+        });
+        localStorage.setItem('admin_leads', JSON.stringify(leads));
+      }
+
+      // Injeta em admin_clients se não existir
+      const clients = JSON.parse(localStorage.getItem('admin_clients') || '[]');
+      if (!clients.some(c => c && c.phone && c.phone.includes(NICOLY_PHONE))) {
+        clients.unshift({
+          id: 'cli_nicoly_0909',
+          name: 'Nicoly Gomes de Castro',
+          role: 'Cliente Particular',
+          category: 'Retratos Pessoais',
+          email: 'nicolygomes021@gmail.com',
+          phone: '(21) 97553-0689',
+          totalSpent: 'R$ 0,00',
+          sessionsCount: 0,
+          status: 'Em Prospecção',
+          lastSession: 'Pendente (Previsto Nov/26)',
+          notes: 'Ensaio Gestante & Família em estúdio com namorado. Contato via WhatsApp em 09/09.',
+        });
+        localStorage.setItem('admin_clients', JSON.stringify(clients));
+      }
+    } catch (_) {}
+
+    // 3. Handle popstate
     const handlePopState = () => {
       setCurrentView(getInitialView());
     };

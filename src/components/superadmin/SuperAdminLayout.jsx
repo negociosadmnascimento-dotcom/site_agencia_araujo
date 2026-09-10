@@ -9,7 +9,7 @@ import {
   Upload, Image as ImageIcon
 } from 'lucide-react';
 import { useAuth, PLATFORM_SETTINGS } from '../../context/AuthContext';
-import { isSupabaseConfigured, SUPABASE_PROJECT_ID } from '../../lib/supabase';
+import { isSupabaseConfigured, SUPABASE_PROJECT_ID, getStoredAnonKey, setCustomSupabaseKey, testSupabaseConnection } from '../../lib/supabase';
 
 // Default initial datasets
 const DEFAULT_TENANTS = [
@@ -232,6 +232,27 @@ export default function SuperAdminLayout({ onBackToSite }) {
 
   const [isSavingConfig, setIsSavingConfig] = useState(false);
   const [configSaveSuccess, setConfigSaveSuccess] = useState(false);
+  const [supabaseKeyInput, setSupabaseKeyInput] = useState(() => getStoredAnonKey() || '');
+  const [testingSupabase, setTestingSupabase] = useState(false);
+  const [supabaseTestResult, setSupabaseTestResult] = useState(null);
+
+  const handleSaveSupabaseKey = () => {
+    setCustomSupabaseKey(supabaseKeyInput);
+    showToast('✓ Chave pública do Supabase configurada!');
+  };
+
+  const handleTestSupabase = async () => {
+    setTestingSupabase(true);
+    setSupabaseTestResult(null);
+    const res = await testSupabaseConnection(supabaseKeyInput);
+    setTestingSupabase(false);
+    setSupabaseTestResult(res);
+    if (res.ok) {
+      showToast('✓ Conexão com Supabase testada e validada!');
+    } else {
+      showToast(res.error || 'Aviso de conexão com Supabase', 'error');
+    }
+  };
 
   const handleSaveConfig = () => {
     setIsSavingConfig(true);
@@ -1798,6 +1819,91 @@ export default function SuperAdminLayout({ onBackToSite }) {
               )}
 
               <div className="rounded-2xl bg-slate-900/80 border border-indigo-900/30 p-6 sm:p-8 space-y-6 max-w-3xl shadow-xl">
+                {/* CONEXÃO DO BANCO DE DADOS EM NUVEM (SUPABASE) */}
+                <div className="p-5 rounded-2xl bg-[#060912] border border-indigo-500/40 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <Database className="w-5 h-5 text-indigo-400" />
+                      <div>
+                        <span className="text-sm font-bold text-white block">Banco de Dados em Nuvem (Supabase)</span>
+                        <span className="text-xs text-slate-400">Sincronização em tempo real de formulários e leads entre todos os dispositivos</span>
+                      </div>
+                    </div>
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase border w-fit ${
+                      (supabaseKeyInput && supabaseKeyInput.length > 20) 
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' 
+                        : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                    }`}>
+                      {(supabaseKeyInput && supabaseKeyInput.length > 20) ? '✓ Chave Configurada' : '⚠ Chave Pendente'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div className="p-3 rounded-xl bg-black/40 border border-white/5 space-y-1">
+                      <span className="text-[11px] text-slate-500 font-mono block">Project ID:</span>
+                      <strong className="text-indigo-300 font-mono">{SUPABASE_PROJECT_ID}</strong>
+                    </div>
+                    <div className="p-3 rounded-xl bg-black/40 border border-white/5 space-y-1">
+                      <span className="text-[11px] text-slate-500 font-mono block">Endpoint URL:</span>
+                      <strong className="text-slate-300 font-mono truncate block">https://{SUPABASE_PROJECT_ID}.supabase.co</strong>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-bold uppercase text-slate-300">
+                        Chave Pública do Supabase (Anon Key)
+                      </label>
+                      <a
+                        href={`https://supabase.com/dashboard/project/${SUPABASE_PROJECT_ID}/settings/api`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-semibold"
+                      >
+                        <span>Pegar Chave no Dashboard</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <input
+                        type="password"
+                        value={supabaseKeyInput}
+                        onChange={e => setSupabaseKeyInput(e.target.value)}
+                        placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                        className="flex-1 px-4 py-2.5 rounded-xl bg-black/50 border border-indigo-900/60 text-white text-xs font-mono focus:border-indigo-500 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSaveSupabaseKey}
+                        className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shrink-0 transition-colors"
+                      >
+                        Salvar Chave
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleTestSupabase}
+                        disabled={testingSupabase || !supabaseKeyInput}
+                        className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-xs shrink-0 transition-colors disabled:opacity-40 flex items-center gap-1.5 justify-center"
+                      >
+                        {testingSupabase ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Shield className="w-3.5 h-3.5 text-indigo-400" />}
+                        <span>Testar Conexão</span>
+                      </button>
+                    </div>
+                    <span className="text-[11px] text-slate-500 mt-1 block">
+                      Localizada em Supabase ➔ Project Settings ➔ API ➔ Project API keys ➔ anon (public).
+                    </span>
+
+                    {supabaseTestResult && (
+                      <div className={`mt-3 p-3 rounded-xl border text-xs flex items-center gap-2 ${
+                        supabaseTestResult.ok ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+                      }`}>
+                        {supabaseTestResult.ok ? <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" /> : <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />}
+                        <span>{supabaseTestResult.message || supabaseTestResult.warning || supabaseTestResult.error}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 {/* Destaque para Personalização & Logotipo */}
                 <div className="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-3">

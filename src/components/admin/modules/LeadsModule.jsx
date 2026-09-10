@@ -53,8 +53,20 @@ export default function LeadsModule() {
   };
 
   // ── Carregar leads com sincronização híbrida (Supabase + Site Submissions) ──
-  // Sem dados de demonstração — ambiente pronto para testes reais
-  const SEED_LEADS = [];
+  const SEED_LEADS = [
+    {
+      id: 'lead_nicoly_0909',
+      name: 'Nicoly Gomes de Castro',
+      service: 'Gestante & Família',
+      phone: '(21) 97553-0689',
+      email: 'nicolygomes021@gmail.com',
+      source: 'Formulário do Site (Orçamento)',
+      estimatedValue: 'R$ 850,00',
+      stage: 'novo',
+      date: '09/09/2026, 14:02',
+      notes: '2 pessoas (gestante e namorado), seriam fotos em estúdio | Data Prevista: novembro | Solicitado via site',
+    }
+  ];
 
   const loadLeads = useCallback(async () => {
     setLoading(true);
@@ -62,7 +74,7 @@ export default function LeadsModule() {
     let resultLeads = [];
 
     // 1. Tenta carregar do Supabase se configurado
-    if (isSupabaseConfigured) {
+    if (isSupabaseConfigured && supabase) {
       try {
         const { data, error: sbError } = await supabase
           .from("leads")
@@ -71,6 +83,28 @@ export default function LeadsModule() {
 
         if (!sbError && data && data.length > 0) {
           resultLeads = data.map(mapRow);
+        }
+
+        // Também carrega submissões do formulário registradas no Supabase
+        const { data: formData, error: formError } = await supabase
+          .from("form_submissions")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (!formError && formData && formData.length > 0) {
+          const formMapped = formData.map(f => ({
+            id: 'sb_form_' + f.id,
+            name: f.name,
+            service: f.service || 'Orçamento do Site',
+            phone: f.phone,
+            email: f.email || '',
+            source: 'Formulário do Site',
+            estimatedValue: 'A definir',
+            stage: 'novo',
+            date: f.created_at ? new Date(f.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : 'Hoje',
+            notes: f.message || '',
+          }));
+          resultLeads = [...resultLeads, ...formMapped];
         }
       } catch (err) {
         console.warn("Supabase query fallback:", err);
