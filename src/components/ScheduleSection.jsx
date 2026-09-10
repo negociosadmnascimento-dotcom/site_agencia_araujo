@@ -287,11 +287,9 @@ export default function ScheduleSection() {
           servico: formData.service,
           telefone: formData.phone,
           email: formData.email || '',
-          origem: 'Agenda Online do Site',
-          etapa: 'novo',
-          valor_estimado: 'A definir',
-          observacoes: `Data Solicitada: ${displayDateStr} às ${selectedSlot} | Locação: ${formData.location}`,
-          tenant_id: 'tenant_001',
+          origem: 'agenda',
+          status: 'novo',
+          mensagem: `Data Solicitada: ${displayDateStr} às ${selectedSlot} | Locação: ${formData.location} | Obs: ${formData.notes || 'Sem observações'}`,
         }]).then(() => {});
       } catch (sbErr) {
         console.warn('Erro ao sincronizar agendamento no Supabase:', sbErr);

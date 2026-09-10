@@ -4,6 +4,8 @@ import { createClient } from '@supabase/supabase-js';
 export const SUPABASE_PROJECT_ID = 'zzoujggbomtcpobcyhyt';
 export const SUPABASE_PROJECT_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co`;
 
+export const DEFAULT_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6b3VqZ2dib210Y3BvYmN5aHl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4MTUzMzMsImV4cCI6MjEwNDM5MTMzM30.3MBO9faHzsoJhn3FPfQOSowOvqcLn5VFWG88hUt2wZ4';
+
 export const getStoredAnonKey = () => {
   if (typeof window !== 'undefined') {
     try {
@@ -13,7 +15,7 @@ export const getStoredAnonKey = () => {
       }
     } catch (_) {}
   }
-  return (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim();
+  return (import.meta.env.VITE_SUPABASE_ANON_KEY || DEFAULT_ANON_KEY).trim();
 };
 
 export const setCustomSupabaseKey = (key) => {

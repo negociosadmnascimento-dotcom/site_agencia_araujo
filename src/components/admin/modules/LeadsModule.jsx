@@ -17,13 +17,13 @@ const mapRow = (row) => ({
   service: row.servico ?? "",
   phone: row.telefone ?? "",
   email: row.email ?? "",
-  source: row.origem ?? "",
-  estimatedValue: row.valor_estimado ?? "",
-  stage: row.etapa ?? "novo",
+  source: row.origem ?? "Site",
+  estimatedValue: row.valor_estimado ?? "A definir",
+  stage: (row.status || row.etapa || "novo").toLowerCase(),
   date: row.criado_em
     ? new Date(row.criado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })
     : "",
-  notes: row.observacoes ?? "",
+  notes: row.mensagem || row.observacoes || "",
 });
 
 const EMPTY_FORM = {
