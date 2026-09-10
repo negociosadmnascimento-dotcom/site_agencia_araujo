@@ -22,6 +22,7 @@ export default function ClientsModule() {
   const INITIAL_CLIENTS = [
     {
       id: 'cli_nicoly_0909',
+      universalId: 'CLI-2026-784-NICOLY',
       name: 'Nicoly Gomes de Castro',
       role: 'Cliente Particular',
       category: 'Retratos Pessoais',
@@ -70,7 +71,8 @@ export default function ClientsModule() {
     const matchesSearch = 
       client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.phone.includes(searchTerm);
+      client.phone.includes(searchTerm) ||
+      (client.universalId || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCat = selectedCategory === 'Todos' || client.category === selectedCategory;
     return matchesSearch && matchesCat;
   });
@@ -237,7 +239,14 @@ export default function ClientsModule() {
                   <td className="py-4 px-6">
                     <div>
                       <span className="font-bold text-white text-sm block">{client.name}</span>
-                      <span className="text-slate-400 text-xs">{client.role}</span>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-slate-400 text-xs">{client.role}</span>
+                        {client.universalId && (
+                          <span className="font-mono text-[9px] font-bold text-gold/90 bg-gold/10 border border-gold/20 px-1.5 py-0.5 rounded">
+                            {client.universalId}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td className="py-4 px-6">

@@ -111,7 +111,9 @@ export default function ContractsModule() {
   };
 
   const filtered = contracts.filter((c) => {
-    const matchesSearch = c.clientName.toLowerCase().includes(searchTerm.toLowerCase()) || c.contractNumber.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = c.clientName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          c.contractNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (c.universalId || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'Todos' || c.signedStatus === filterStatus;
     return matchesSearch && matchesStatus;
   });
@@ -162,10 +164,10 @@ export default function ContractsModule() {
           <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Buscar por número do contrato ou cliente..."
+            placeholder="Buscar por número, cliente ou ID Universal (ex: CLI-2026-...)..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/80 border border-slate-800 text-white text-xs focus:border-gold focus:outline-none"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/80 border border-slate-800 text-white text-xs focus:border-gold focus:outline-none font-mono"
           />
         </div>
 
@@ -198,6 +200,9 @@ export default function ContractsModule() {
                 <span className="font-mono text-xs font-bold text-gold bg-black/40 px-2.5 py-1 rounded-lg border border-white/5">
                   {ctr.contractNumber}
                 </span>
+                <span className="font-mono text-[10px] font-bold text-gold/90 bg-gold/10 border border-gold/20 px-2 py-0.5 rounded-lg">
+                  ID: {ctr.universalId || ctr.contractNumber}
+                </span>
                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${ctr.statusColor}`}>
                   {ctr.signedStatus}
                 </span>
@@ -219,6 +224,16 @@ export default function ContractsModule() {
                 <span className="text-xl font-serif font-bold text-white block">
                   {isSuperAdmin ? ctr.totalAmount : '••••••••'}
                 </span>
+                {ctr.depositAmount && ctr.depositAmount !== 'R$ 0,00' && (
+                  <span className="text-[10px] text-cyan-300 font-sans block mt-0.5">
+                    Sinal Pago: <strong>{isSuperAdmin ? ctr.depositAmount : '••••'}</strong>
+                  </span>
+                )}
+                {ctr.remainingAmount && ctr.remainingAmount !== 'R$ 0,00' && (
+                  <span className="text-[10px] text-amber-300 font-sans block">
+                    Saldo a Acertar: <strong>{isSuperAdmin ? ctr.remainingAmount : '••••'}</strong>
+                  </span>
+                )}
               </div>
 
               {/* Actions */}
@@ -242,7 +257,7 @@ export default function ContractsModule() {
                 </button>
 
                 <a
-                  href={`https://wa.me/55${ctr.phone.replace(/\D/g, '')}?text=Olá%20${encodeURIComponent(ctr.clientName)}!%20Seu%20contrato%20e%20termo%20de%20cessão%20de%20imagem%20está%20disponível%20para%20assinatura%20digital:%20https://agenciasaraujo.com.br/contrato/${ctr.token}`}
+                  href={`https://wa.me/55${(ctr.phone || '').replace(/\D/g, '')}?text=Olá%20${encodeURIComponent(ctr.clientName)}!%20Seu%20contrato%20e%20termo%20de%20cessão%20de%20imagem%20[${ctr.contractNumber}%20•%20ID:%20${encodeURIComponent(ctr.universalId || ctr.contractNumber)}]%20está%20disponível%20para%20assinatura%20digital:%20https://agenciasaraujo.com.br/contrato/${ctr.token}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 transition-colors"

@@ -8,23 +8,47 @@ import WhatsAppIcon from '../../../components/icons/WhatsAppIcon';
 import { useAuth } from "../../../context/AuthContext";
 import { supabase, isSupabaseConfigured } from "../../../lib/supabaseClient";
 
+// ─── Gerador de ID Universal determinístico ───────────────────────────────────
+export const generateUniversalId = (lead) => {
+  if (lead?.universalId) return lead.universalId;
+  const year = new Date().getFullYear();
+  const seedStr = String(lead?.id || lead?.phone || Date.now());
+  let hash = 0;
+  for (let i = 0; i < seedStr.length; i++) {
+    hash = ((hash << 5) - hash) + seedStr.charCodeAt(i);
+    hash |= 0;
+  }
+  const seq = Math.abs(hash % 900) + 100;
+  const cleanName = (lead?.name || 'CLIENTE')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z]/g, '')
+    .slice(0, 6)
+    .toUpperCase() || 'CLIENTE';
+  return `CLI-${year}-${seq}-${cleanName}`;
+};
+
 // ─── Mapeamento de campos Supabase → estado local ────────────────────────────
 // Colunas esperadas na tabela "leads":
-//   id, nome, servico, telefone, email, origem, valor_estimado, etapa, criado_em, observacoes
-const mapRow = (row) => ({
-  id: row.id,
-  name: row.nome ?? "",
-  service: row.servico ?? "",
-  phone: row.telefone ?? "",
-  email: row.email ?? "",
-  source: row.origem ?? "Site",
-  estimatedValue: row.valor_estimado ?? "A definir",
-  stage: (row.status || row.etapa || "novo").toLowerCase(),
-  date: row.criado_em
-    ? new Date(row.criado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })
-    : "",
-  notes: row.mensagem || row.observacoes || "",
-});
+//   id, universal_id, nome, servico, telefone, email, origem, valor_estimado, etapa, criado_em, observacoes
+const mapRow = (row) => {
+  const leadObj = {
+    id: row.id,
+    name: row.nome ?? "",
+    service: row.servico ?? "",
+    phone: row.telefone ?? "",
+    email: row.email ?? "",
+    source: row.origem ?? "Site",
+    estimatedValue: row.valor_estimado ?? "A definir",
+    stage: (row.status || row.etapa || "novo").toLowerCase(),
+    date: row.criado_em
+      ? new Date(row.criado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })
+      : "",
+    notes: row.mensagem || row.observacoes || "",
+  };
+  leadObj.universalId = row.universal_id || generateUniversalId(leadObj);
+  return leadObj;
+};
 
 const EMPTY_FORM = {
   name: "",
@@ -47,9 +71,50 @@ export default function LeadsModule() {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // Estado para edição inline do valor negociado no card
+  const [editingLeadId, setEditingLeadId] = useState(null);
+  const [editingValue, setEditingValue] = useState("");
+
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const startEditingValue = (lead) => {
+    setEditingLeadId(lead.id);
+    setEditingValue(lead.estimatedValue && lead.estimatedValue !== "A definir" ? lead.estimatedValue : "");
+  };
+
+  const saveEditingValue = async (leadId) => {
+    const finalVal = editingValue.trim()
+      ? (editingValue.trim().startsWith("R$") ? editingValue.trim() : `R$ ${editingValue.trim()}`)
+      : "A definir";
+
+    setLeads((prev) => {
+      const updated = prev.map((l) => (l.id === leadId ? { ...l, estimatedValue: finalVal } : l));
+      try {
+        localStorage.setItem("admin_leads", JSON.stringify(updated));
+      } catch (_) {}
+      return updated;
+    });
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from("leads").update({ valor_estimado: finalVal }).eq("id", leadId);
+      } catch (err) {
+        console.warn("Erro ao atualizar valor estimado no Supabase:", err);
+      }
+    }
+
+    logActivity?.("EDIT_LEAD_VAL", "leads", `Atualizou valor estimado do lead ${leadId} para ${finalVal}`);
+    showToast(`Valor estimado atualizado para ${finalVal}!`);
+    setEditingLeadId(null);
+    setEditingValue("");
+  };
+
+  const cancelEditingValue = () => {
+    setEditingLeadId(null);
+    setEditingValue("");
   };
 
   // ── Carregar leads com sincronização em nuvem e persistência de exclusões ──
@@ -99,6 +164,12 @@ export default function LeadsModule() {
 
         seenIds.add(strId);
         if (normPhone) seenPhones.add(normPhone);
+
+        // Garante que o Universal ID esteja sempre presente
+        if (!lead.universalId) {
+          lead.universalId = generateUniversalId(lead);
+        }
+
         unique.push(lead);
       }
 
@@ -173,10 +244,13 @@ export default function LeadsModule() {
     showToast("Lead reativado e retornado para 1. Novo Lead!", "success");
   };
 
-  // ── Avançar etapa ──────────────────────────────────────────────────────────
+  // ── Avançar etapa com Disparo Automático para Pagamentos e CRM ───────────────
   const moveStage = async (leadId, nextStage) => {
+    const leadToMove = leads.find((l) => l.id === leadId);
+    const universalId = leadToMove?.universalId || generateUniversalId(leadToMove || { id: leadId });
+
     setLeads((prev) => {
-      const updated = prev.map((l) => (l.id === leadId ? { ...l, stage: nextStage } : l));
+      const updated = prev.map((l) => (l.id === leadId ? { ...l, stage: nextStage, universalId } : l));
       try {
         localStorage.setItem("admin_leads", JSON.stringify(updated));
       } catch (_) {}
@@ -185,13 +259,102 @@ export default function LeadsModule() {
 
     if (isSupabaseConfigured && supabase) {
       try {
-        await supabase.from("leads").update({ status: nextStage, etapa: nextStage }).eq("id", leadId);
+        await supabase.from("leads").update({ 
+          status: nextStage, 
+          etapa: nextStage,
+          universal_id: universalId 
+        }).eq("id", leadId);
       } catch (err) {
         console.warn("Erro ao atualizar etapa no Supabase:", err);
       }
     }
 
     logActivity?.("MOVE_LEAD", "leads", `Lead ${leadId} avançado para "${nextStage}"`);
+
+    // GATILHO AUTOMÁTICO AO FECHAR LEAD (Etapa 4. Fechado / Ganho)
+    if (nextStage === "fechado" && leadToMove) {
+      // 1. Atualizar ou Criar Cliente no CRM de Clientes (admin_clients) com status 'Ativo'
+      try {
+        const clients = JSON.parse(localStorage.getItem("admin_clients") || "[]");
+        const normalizePhone = (p) => (p || "").replace(/\D/g, "");
+        const leadPhoneNorm = normalizePhone(leadToMove.phone);
+        const existingIdx = clients.findIndex(
+          (c) =>
+            (c.universalId && c.universalId === universalId) ||
+            (leadPhoneNorm && normalizePhone(c.phone) === leadPhoneNorm) ||
+            (c.name && c.name.toLowerCase() === leadToMove.name.toLowerCase())
+        );
+
+        if (existingIdx >= 0) {
+          clients[existingIdx] = {
+            ...clients[existingIdx],
+            universalId,
+            status: "Ativo",
+            category: leadToMove.service || clients[existingIdx].category || "Retratos Pessoais",
+            notes: leadToMove.notes || clients[existingIdx].notes,
+          };
+        } else {
+          clients.unshift({
+            id: `cli_${Date.now()}`,
+            universalId,
+            name: leadToMove.name,
+            role: "Cliente Particular",
+            category: leadToMove.service || "Retratos Pessoais",
+            email: leadToMove.email || "",
+            phone: leadToMove.phone || "",
+            totalSpent: "R$ 0,00",
+            sessionsCount: 1,
+            status: "Ativo",
+            lastSession: "Fechamento / Em Agendamento",
+            notes: leadToMove.notes || `Cliente originado do Funil de Leads [${universalId}]`,
+          });
+        }
+        localStorage.setItem("admin_clients", JSON.stringify(clients));
+      } catch (err) {
+        console.warn("Erro ao atualizar admin_clients:", err);
+      }
+
+      // 2. Disparo Automático para o Módulo de Pagamentos (admin_payments)
+      try {
+        const payments = JSON.parse(localStorage.getItem("admin_payments") || "[]");
+        const existingPay = payments.find((p) => p.universalId === universalId);
+        if (!existingPay) {
+          const now = new Date();
+          const year = now.getFullYear();
+          const seq = Math.floor(100 + Math.random() * 900);
+          const inv = `FAT-${year}-${seq}`;
+          const finalAmount = leadToMove.estimatedValue && leadToMove.estimatedValue !== "A definir"
+            ? (leadToMove.estimatedValue.startsWith("R$") ? leadToMove.estimatedValue : `R$ ${leadToMove.estimatedValue}`)
+            : "R$ 850,00";
+
+          const autoPayment = {
+            id: `pay_${Date.now()}`,
+            invoice: inv,
+            universalId,
+            clientName: leadToMove.name,
+            phone: leadToMove.phone,
+            email: leadToMove.email,
+            description: `Ensaio ${leadToMove.service || "Fotográfico"}`,
+            amount: finalAmount,
+            depositAmount: "R$ 0,00",
+            remainingAmount: finalAmount,
+            method: "Aguardando Definição",
+            status: "Pendente Sinal",
+            dueDate: new Date(now.getTime() + 7 * 86400000).toLocaleDateString("pt-BR"),
+            paidAt: null,
+            statusColor: "bg-amber-500/20 text-amber-300 border-amber-500/30",
+          };
+          payments.unshift(autoPayment);
+          localStorage.setItem("admin_payments", JSON.stringify(payments));
+        }
+      } catch (err) {
+        console.warn("Erro ao disparar pagamento automático:", err);
+      }
+
+      showToast(`Lead fechado com sucesso! Fatura gerada automaticamente em Pagamentos com ID Universal "${universalId}".`);
+      return;
+    }
+
     showToast(`Avançado para "${stages.find((s) => s.key === nextStage)?.label}"!`);
   };
 
@@ -235,6 +398,7 @@ export default function LeadsModule() {
     }
     setSaving(true);
     let createdLead = null;
+    const universalId = generateUniversalId(newLead);
 
     if (isSupabaseConfigured && supabase) {
       try {
@@ -251,6 +415,7 @@ export default function LeadsModule() {
             etapa: newLead.stage || "novo",
             status: newLead.stage || "novo",
             origem: newLead.source || "Manual",
+            universal_id: universalId,
           }])
           .select()
           .single();
@@ -266,6 +431,7 @@ export default function LeadsModule() {
     if (!createdLead) {
       createdLead = {
         id: `lead_${Date.now()}`,
+        universalId,
         name: newLead.name,
         service: newLead.service,
         phone: newLead.phone,
@@ -286,8 +452,8 @@ export default function LeadsModule() {
       return updated;
     });
 
-    logActivity?.("NOVO_LEAD", "leads", `Novo lead criado: ${newLead.name}`);
-    showToast(`Lead "${newLead.name}" adicionado ao funil!`);
+    logActivity?.("NOVO_LEAD", "leads", `Novo lead criado: ${newLead.name} [${universalId}]`);
+    showToast(`Lead "${newLead.name}" adicionado com ID "${universalId}"!`);
     setNewLead(EMPTY_FORM);
     setShowModal(false);
     setSaving(false);
@@ -383,24 +549,68 @@ export default function LeadsModule() {
                         className="p-4 rounded-xl bg-black/40 border border-white/5 hover:border-gold/30 transition-all space-y-3 group"
                       >
                         <div>
-                          <div className="flex items-start justify-between gap-1">
-                            <span className="text-xs font-bold text-white block">{lead.name}</span>
+                          {/* Universal ID badge & Delete */}
+                          <div className="flex items-center justify-between gap-1 mb-1.5">
+                            <span className="font-mono text-[9px] font-bold text-gold bg-gold/10 border border-gold/20 px-1.5 py-0.5 rounded">
+                              {lead.universalId || generateUniversalId(lead)}
+                            </span>
                             <button
                               onClick={() => deleteLead(lead.id, lead.name)}
                               className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-red-400/60 hover:text-red-400 transition-all shrink-0"
-                              title="Remover"
+                              title="Remover Lead"
                             >
                               <X className="w-3 h-3" />
                             </button>
+                          </div>
+
+                          <div className="flex items-start justify-between gap-1">
+                            <span className="text-xs font-bold text-white block">{lead.name}</span>
                           </div>
                           <p className="text-xs text-gold-300 font-medium mt-0.5">{lead.service}</p>
                           <p className="text-[11px] text-slate-400 mt-1 line-clamp-2">{lead.notes}</p>
                         </div>
 
+                        {/* Valor Estimado com Edição Inline no Card */}
                         <div className="flex items-center justify-between text-xs pt-2 border-t border-white/5">
-                          <span className="font-mono text-emerald-400 font-semibold text-[11px]">
-                            {lead.estimatedValue || "—"}
-                          </span>
+                          {editingLeadId === lead.id ? (
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="text"
+                                value={editingValue}
+                                onChange={(e) => setEditingValue(e.target.value)}
+                                placeholder="R$ 850,00"
+                                autoFocus
+                                className="w-24 px-1.5 py-0.5 rounded bg-black border border-gold text-white text-[11px] font-mono focus:outline-none"
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") saveEditingValue(lead.id);
+                                  if (e.key === "Escape") cancelEditingValue();
+                                }}
+                              />
+                              <button
+                                onClick={() => saveEditingValue(lead.id)}
+                                className="p-1 rounded bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/40 transition-colors"
+                                title="Confirmar novo valor"
+                              >
+                                <Check className="w-3 h-3" />
+                              </button>
+                              <button
+                                onClick={cancelEditingValue}
+                                className="p-1 rounded bg-red-500/20 text-red-300 hover:bg-red-500/40 transition-colors"
+                                title="Cancelar"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => startEditingValue(lead)}
+                              className="group/val flex items-center gap-1 font-mono text-emerald-400 font-semibold text-[11px] hover:text-emerald-300 transition-colors text-left"
+                              title="Clique para editar o valor acordado"
+                            >
+                              <span>{lead.estimatedValue || "A definir"}</span>
+                              <span className="text-[10px] text-slate-500 opacity-60 group-hover/val:opacity-100 transition-opacity">✏️</span>
+                            </button>
+                          )}
                           <span className="text-[10px] font-mono text-slate-400 bg-white/5 px-2 py-0.5 rounded">
                             {lead.source}
                           </span>
