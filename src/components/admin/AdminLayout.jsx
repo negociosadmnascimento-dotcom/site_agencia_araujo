@@ -24,7 +24,7 @@ import PaymentsModule from './modules/PaymentsModule';
 import ContractsModule from './modules/ContractsModule';
 import CustomizationModule from './modules/CustomizationModule';
 
-export default function AdminLayout() {
+export default function AdminLayout({ onBackToSite }) {
   const { user, logout, logActivity } = useAuth();
   const [activeModule, setActiveModule] = useState('Dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
