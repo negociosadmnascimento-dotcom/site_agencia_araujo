@@ -53,23 +53,61 @@ export default function ContractsModule() {
     }
   };
 
-  const isPaymentConfirmed = (universalId) => {
+  // ── Pipeline Integrity: Verifica se há pagamento confirmado (Sinal ou Quitado) ──
+  const isPaymentConfirmed = (ctr) => {
+    if (!ctr) return false;
     const payments = getPayments();
-    return payments.some(
-      (p) =>
-        p.universalId === universalId &&
-        (p.status === 'Sinal Quitado' || p.status === 'Quitado')
+    const uid = (ctr.universalId || '').trim().toLowerCase();
+    const ctrNum = (ctr.contractNumber || '').trim().toLowerCase();
+    const client = (ctr.clientName || '').trim().toLowerCase();
+
+    // Localiza faturas associadas a este contrato por ID Universal, Número de Contrato ou Nome
+    const matchingPayments = payments.filter((p) => {
+      const pUid = (p.universalId || '').trim().toLowerCase();
+      const pClient = (p.clientName || '').trim().toLowerCase();
+      const pDesc = (p.description || '').trim().toLowerCase();
+      const pInv = (p.invoice || '').trim().toLowerCase();
+
+      const matchByUid = uid && (pUid === uid || pDesc.includes(uid) || pInv.includes(uid));
+      const matchByCtr = ctrNum && (pUid === ctrNum || pDesc.includes(ctrNum) || pInv.includes(ctrNum.replace('ctr-', 'fat-')));
+      const matchByClient = client && pClient && (pClient === client || pClient.includes(client) || client.includes(pClient));
+
+      return matchByUid || matchByCtr || matchByClient;
+    });
+
+    if (matchingPayments.length === 0) {
+      // Se não há fatura encontrada no financeiro, só exibe se já assinado digitalmente
+      return ctr.signedStatus === 'Assinado Digitalmente';
+    }
+
+    // Se há faturas associadas, OBRIGATORIAMENTE ao menos uma precisa estar 'Sinal Quitado' ou 'Quitado'
+    return matchingPayments.some(
+      (p) => p.status === 'Sinal Quitado' || p.status === 'Quitado'
     );
   };
 
-  // Get the sinal amount from confirmed payment, if any
-  const getConfirmedSinal = (universalId) => {
+  // Obtém o valor do sinal confirmado da fatura correspondente
+  const getConfirmedSinal = (ctr) => {
+    if (!ctr) return '';
     const payments = getPayments();
-    const pay = payments.find(
-      (p) =>
-        p.universalId === universalId &&
-        (p.status === 'Sinal Quitado' || p.status === 'Quitado')
-    );
+    const uid = (ctr.universalId || '').trim().toLowerCase();
+    const ctrNum = (ctr.contractNumber || '').trim().toLowerCase();
+    const client = (ctr.clientName || '').trim().toLowerCase();
+
+    const pay = payments.find((p) => {
+      const pUid = (p.universalId || '').trim().toLowerCase();
+      const pClient = (p.clientName || '').trim().toLowerCase();
+      const pDesc = (p.description || '').trim().toLowerCase();
+      const pInv = (p.invoice || '').trim().toLowerCase();
+      const isConfirmed = p.status === 'Sinal Quitado' || p.status === 'Quitado';
+      if (!isConfirmed) return false;
+
+      const matchByUid = uid && (pUid === uid || pDesc.includes(uid) || pInv.includes(uid));
+      const matchByCtr = ctrNum && (pUid === ctrNum || pDesc.includes(ctrNum) || pInv.includes(ctrNum.replace('ctr-', 'fat-')));
+      const matchByClient = client && pClient && (pClient === client || pClient.includes(client) || client.includes(pClient));
+
+      return matchByUid || matchByCtr || matchByClient;
+    });
     return pay ? pay.depositAmount || '' : '';
   };
 
@@ -83,8 +121,7 @@ export default function ContractsModule() {
 
   // ── Open modal pre-filled from an existing contract card ──
   const openContractFor = (ctr) => {
-    const uid = ctr.universalId || ctr.contractNumber;
-    const confirmedSinal = getConfirmedSinal(uid);
+    const confirmedSinal = getConfirmedSinal(ctr);
     setNewCtr({
       clientName: ctr.clientName || '',
       clientCpf: ctr.clientCpf && ctr.clientCpf !== 'Sob consulta' ? ctr.clientCpf : '',
@@ -215,9 +252,9 @@ export default function ContractsModule() {
 
   // ── Filter: pipeline integrity + search + status ──
   const filtered = contracts.filter((c) => {
-    const uid = c.universalId || c.contractNumber;
-    if (!isPaymentConfirmed(uid)) return false; // hide if no confirmed payment
+    if (!isPaymentConfirmed(c)) return false; // oculta se não houver confirmação financeira (sinal ou quitação)
 
+    const uid = c.universalId || c.contractNumber;
     const matchesSearch =
       c.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.contractNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -226,11 +263,8 @@ export default function ContractsModule() {
     return matchesSearch && matchesStatus;
   });
 
-  // Count contracts hidden due to pending payment (for info banner)
-  const hiddenCount = contracts.filter((c) => {
-    const uid = c.universalId || c.contractNumber;
-    return !isPaymentConfirmed(uid);
-  }).length;
+  // Quantidade de contratos aguardando pagamento confirmado
+  const hiddenCount = contracts.filter((c) => !isPaymentConfirmed(c)).length;
 
   return (
     <div className="space-y-8">
