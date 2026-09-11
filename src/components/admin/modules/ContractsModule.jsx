@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { 
   FileCheck, Plus, Search, Check, 
   ShieldCheck, X, RefreshCw, AlertTriangle, Clock
@@ -15,6 +15,7 @@ export default function ContractsModule() {
   const [toast, setToast] = useState(null);
   // Flag: was modal opened from a row (prefilled) or from the header (blank)?
   const [isCtrModalPrefilled, setIsCtrModalPrefilled] = useState(false);
+  const [editingCtrId, setEditingCtrId] = useState(null);
 
   const showToast = (msg) => {
     setToast(msg);
@@ -76,6 +77,7 @@ export default function ContractsModule() {
   const openBlankContractModal = () => {
     setNewCtr(emptyNewCtr);
     setIsCtrModalPrefilled(false);
+    setEditingCtrId(null);
     setShowAddModal(true);
   };
 
@@ -88,12 +90,13 @@ export default function ContractsModule() {
       clientCpf: ctr.clientCpf && ctr.clientCpf !== 'Sob consulta' ? ctr.clientCpf : '',
       serviceTitle: ctr.serviceTitle || 'Prestação de Serviços Fotográficos & Cessão de Imagem',
       totalAmount: ctr.totalAmount ? ctr.totalAmount.replace('R$ ', '') : '',
-      depositAmount: confirmedSinal ? confirmedSinal.replace('R$ ', '') : '',
+      depositAmount: ctr.depositAmount && ctr.depositAmount !== 'R$ 0,00' ? ctr.depositAmount.replace('R$ ', '') : (confirmedSinal ? confirmedSinal.replace('R$ ', '') : ''),
       phone: ctr.phone || '',
       eventDate: ctr.eventDate && ctr.eventDate !== 'A definir' ? ctr.eventDate : '',
       eventTime: ctr.eventTime || '',
     });
     setIsCtrModalPrefilled(true);
+    setEditingCtrId(ctr.id);
     setShowAddModal(true);
   };
 
@@ -131,7 +134,8 @@ export default function ContractsModule() {
     if (!newCtr.clientName || !newCtr.totalAmount) return;
 
     setIsSaving(true);
-    const num = `CTR-2026-${Math.floor(100 + Math.random() * 900)}`;
+    const existingCtr = editingCtrId ? contracts.find(c => c.id === editingCtrId) : null;
+    const num = existingCtr?.contractNumber || `CTR-2026-${Math.floor(100 + Math.random() * 900)}`;
     const formatVal = (v) => (v ? (String(v).startsWith('R$') ? v : `R$ ${v}`) : 'R$ 0,00');
     const totalNum = parseFloat((newCtr.totalAmount || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
     const depNum = parseFloat((newCtr.depositAmount || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
@@ -139,9 +143,9 @@ export default function ContractsModule() {
     const formatCurrency = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
     const created = {
-      id: `ctr_${Date.now()}`,
+      id: existingCtr?.id || `ctr_${Date.now()}`,
       contractNumber: num,
-      universalId: num,
+      universalId: existingCtr?.universalId || num,
       clientName: newCtr.clientName,
       clientCpf: newCtr.clientCpf || 'Sob consulta',
       serviceTitle: newCtr.serviceTitle,
@@ -150,17 +154,19 @@ export default function ContractsModule() {
       totalAmount: formatVal(newCtr.totalAmount),
       depositAmount: newCtr.depositAmount ? formatVal(newCtr.depositAmount) : 'R$ 0,00',
       remainingAmount: formatCurrency(remNum),
-      signedStatus: 'Aguardando Assinatura',
-      signedAt: null,
+      signedStatus: existingCtr?.signedStatus || 'Aguardando Assinatura',
+      signedAt: existingCtr?.signedAt || null,
       revisaoSolicitada: false,
       revisaoAt: null,
-      token: `ctr_token_${Math.random().toString(36).substring(2, 10)}`,
-      statusColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+      token: existingCtr?.token || `ctr_token_${Math.random().toString(36).substring(2, 10)}`,
+      statusColor: existingCtr?.statusColor || 'bg-amber-500/20 text-amber-300 border-amber-500/30',
       phone: newCtr.phone || '(21) 97429-9780',
     };
 
     setTimeout(() => {
-      const updatedContracts = [created, ...contracts];
+      const updatedContracts = editingCtrId
+        ? contracts.map(c => c.id === editingCtrId ? created : c)
+        : [created, ...contracts];
       setContracts(updatedContracts);
       try {
         localStorage.setItem('admin_contracts', JSON.stringify(updatedContracts));
@@ -195,11 +201,14 @@ export default function ContractsModule() {
 
       logActivity?.('EMISSAO_CONTRATO', 'contratos', `Emitiu minuta contratual ${num} para ${created.clientName}`);
       setIsSaving(false);
+      setEditingCtrId(null);
       setShowAddModal(false);
       setNewCtr(emptyNewCtr);
-      showToast(depNum > 0
-        ? `Contrato ${num} gerado e disponível na lista!`
-        : `Contrato ${num} gerado! Aparecerá na lista após confirmação do pagamento.`
+      showToast(editingCtrId
+        ? `Contrato ${num} atualizado com sucesso!`
+        : (depNum > 0
+            ? `Contrato ${num} gerado e disponível na lista!`
+            : `Contrato ${num} gerado! Aparecerá na lista após confirmação do pagamento.`)
       );
     }, 800);
   };

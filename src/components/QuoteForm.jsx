@@ -392,8 +392,9 @@ export default function QuoteForm() {
                         name="date"
                         value={formData.date}
                         onChange={handleChange}
-                        placeholder="Clique no 📅 ou digite: Outubro / Próximo mês..."
-                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-stone-50 dark:bg-dark-950/80 border border-stone-300 dark:border-slate-700/80 focus:border-gold-600 dark:focus:border-gold focus:outline-none text-slate-900 dark:text-white text-sm placeholder-slate-400 dark:placeholder-slate-500 transition-colors"
+                        onClick={() => datePickerRef.current?.showPicker?.()}
+                        placeholder="Clique no campo para abrir o calendário ou digite livremente..."
+                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-stone-50 dark:bg-dark-950/80 border border-stone-300 dark:border-slate-700/80 focus:border-gold-600 dark:focus:border-gold focus:outline-none text-slate-900 dark:text-white text-sm placeholder-slate-400 dark:placeholder-slate-500 transition-colors cursor-pointer"
                       />
                     </div>
                   </div>

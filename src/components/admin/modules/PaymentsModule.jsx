@@ -48,11 +48,13 @@ export default function PaymentsModule() {
 
   // Flag para indicar se o modal de adicionar pagamento foi aberto com pré-preenchimento (avulso = false)
   const [isPayModalPrefilled, setIsPayModalPrefilled] = useState(false);
+  const [editingPayId, setEditingPayId] = useState(null);
 
   // Abre o modal de pagamento avulso (em branco)
   const openBlankPayModal = () => {
     setNewPay({ clientName: '', description: '', amount: '', depositAmount: '', method: 'PIX Instantâneo', installments: '1', contractId: '', dueDate: '' });
     setIsPayModalPrefilled(false);
+    setEditingPayId(null);
     setShowAddModal(true);
   };
 
@@ -69,6 +71,7 @@ export default function PaymentsModule() {
       dueDate: pay.dueDate || '',
     });
     setIsPayModalPrefilled(true);
+    setEditingPayId(pay.id);
     setShowAddModal(true);
   };
 
@@ -218,7 +221,17 @@ export default function PaymentsModule() {
 
     setTimeout(() => {
       setPayments(prev => {
-        const next = [created, ...prev];
+        let next;
+        if (editingPayId) {
+          next = prev.map(p => p.id === editingPayId ? {
+            ...p,
+            ...created,
+            id: p.id,
+            invoice: p.invoice || created.invoice,
+          } : p);
+        } else {
+          next = [created, ...prev];
+        }
         try { localStorage.setItem('admin_payments', JSON.stringify(next)); } catch (_) {}
         return next;
       });
@@ -230,6 +243,7 @@ export default function PaymentsModule() {
       }
 
       setIsSaving(false);
+      setEditingPayId(null);
       setNewPay({ 
         clientName: '', 
         description: '', 
@@ -241,7 +255,10 @@ export default function PaymentsModule() {
         dueDate: '' 
       });
       setShowAddModal(false);
-      showToast(`Fatura ${inv} com ID Universal "${universalId}" registrada com sucesso!`);
+      showToast(editingPayId
+        ? `Pagamento para "${created.clientName}" atualizado com sucesso!`
+        : `Fatura ${inv} com ID Universal "${universalId}" registrada com sucesso!`
+      );
     }, 600);
   };
 
