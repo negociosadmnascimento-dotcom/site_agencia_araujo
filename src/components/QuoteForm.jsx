@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Send, CheckCircle2, Mail, Phone, User, Calendar, FileText, Sparkles, Clock, AlertCircle } from 'lucide-react';
 import WhatsAppIcon from './icons/WhatsAppIcon';
 import { CONTACT_INFO } from '../config/contact';
@@ -17,6 +17,7 @@ export default function QuoteForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const datePickerRef = useRef(null);
 
   // Format phone input
   const handlePhoneChange = (e) => {
@@ -366,13 +367,32 @@ export default function QuoteForm() {
                       Data ou Período Previsto (Opcional)
                     </label>
                     <div className="relative">
-                      <Calendar className="w-4 h-4 text-slate-500 dark:text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      {/* Hidden native date picker — triggered by calendar icon click */}
+                      <input
+                        ref={datePickerRef}
+                        type="date"
+                        className="sr-only"
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            const [y, m, d] = e.target.value.split('-');
+                            setFormData(prev => ({ ...prev, date: `${d}/${m}/${y}` }));
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        title="Abrir calendário"
+                        onClick={() => datePickerRef.current?.showPicker?.()}
+                        className="w-4 h-4 text-slate-500 dark:text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 hover:text-gold-600 transition-colors focus:outline-none"
+                      >
+                        <Calendar className="w-4 h-4" />
+                      </button>
                       <input
                         type="text"
                         name="date"
                         value={formData.date}
                         onChange={handleChange}
-                        placeholder="Ex: Próximo mês / Outubro / A definir"
+                        placeholder="Clique no 📅 ou digite: Outubro / Próximo mês..."
                         className="w-full pl-10 pr-4 py-3 rounded-xl bg-stone-50 dark:bg-dark-950/80 border border-stone-300 dark:border-slate-700/80 focus:border-gold-600 dark:focus:border-gold focus:outline-none text-slate-900 dark:text-white text-sm placeholder-slate-400 dark:placeholder-slate-500 transition-colors"
                       />
                     </div>

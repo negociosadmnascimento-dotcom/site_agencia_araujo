@@ -46,6 +46,32 @@ export default function PaymentsModule() {
   const [depositInput, setDepositInput] = useState('');
   const [depositMethod, setDepositMethod] = useState('PIX Instantâneo');
 
+  // Flag para indicar se o modal de adicionar pagamento foi aberto com pré-preenchimento (avulso = false)
+  const [isPayModalPrefilled, setIsPayModalPrefilled] = useState(false);
+
+  // Abre o modal de pagamento avulso (em branco)
+  const openBlankPayModal = () => {
+    setNewPay({ clientName: '', description: '', amount: '', depositAmount: '', method: 'PIX Instantâneo', installments: '1', contractId: '', dueDate: '' });
+    setIsPayModalPrefilled(false);
+    setShowAddModal(true);
+  };
+
+  // Abre o modal de pagamento pré-preenchido com dados de um registro existente
+  const openPayModalFor = (pay) => {
+    setNewPay({
+      clientName: pay.clientName || '',
+      description: pay.description || '',
+      amount: pay.amount ? pay.amount.replace('R$ ', '') : '',
+      depositAmount: pay.depositAmount && pay.depositAmount !== 'R$ 0,00' ? pay.depositAmount.replace('R$ ', '') : '',
+      method: pay.method || 'PIX Instantâneo',
+      installments: '1',
+      contractId: pay.universalId || '',
+      dueDate: pay.dueDate || '',
+    });
+    setIsPayModalPrefilled(true);
+    setShowAddModal(true);
+  };
+
   const parseAmount = (val) => {
     if (!val) return 0;
     const clean = String(val).replace(/[^\d,-]/g, '').replace(',', '.');
@@ -403,11 +429,11 @@ export default function PaymentsModule() {
           )}
 
           <button
-            onClick={() => setShowAddModal(true)}
+            onClick={openBlankPayModal}
             className="px-4 py-2.5 rounded-xl bg-gold-gradient text-dark-950 font-bold text-xs uppercase tracking-wider hover:brightness-110 shadow-lg shadow-gold/20 flex items-center gap-2 transition-all"
           >
             <Plus className="w-4 h-4" />
-            <span>Lançar Pagamento</span>
+            <span>+ Lançar Pagamento Avulso</span>
           </button>
         </div>
       </div>
@@ -555,56 +581,69 @@ export default function PaymentsModule() {
                       </div>
                     </td>
                     <td className="py-4 px-6">
+                      {/* Status badge */}
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${pay.statusColor}`}>
                         {pay.status}
                       </span>
+
+                      {/* Ações de status integradas à coluna Status */}
+                      {isPending && (
+                        <div className="flex flex-col gap-1 mt-2">
+                          <button
+                            onClick={() => openDepositModal(pay)}
+                            title="Registrar recebimento de sinal (reserva)"
+                            className="px-2.5 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-[10px] font-semibold transition-colors whitespace-nowrap w-full text-left"
+                          >
+                            ↓ Baixar Sinal
+                          </button>
+                          <button
+                            onClick={() => markAsPaid(pay.id)}
+                            title="Quitar fatura integralmente"
+                            className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[10px] font-semibold transition-colors whitespace-nowrap w-full text-left"
+                          >
+                            ✓ Quitar Total
+                          </button>
+                        </div>
+                      )}
+
+                      {isSignalPaid && (
+                        <div className="flex flex-col gap-1 mt-2">
+                          <span className="text-[10px] font-mono text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20 whitespace-nowrap">
+                            Contrato Emitido ✓
+                          </span>
+                          <button
+                            onClick={() => markAsPaid(pay.id)}
+                            title="Receber e quitar o saldo restante na execução do ensaio"
+                            className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[10px] font-semibold transition-colors whitespace-nowrap w-full text-left"
+                          >
+                            ✓ Quitar Saldo
+                          </button>
+                        </div>
+                      )}
+
+                      {isFullyPaid && (
+                        <div className="mt-1">
+                          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                            Quitado 100% ✓
+                          </span>
+                        </div>
+                      )}
                     </td>
+
+                    {/* Coluna Ações: Lançar Pagamento individual + Deletar */}
                     <td className="py-4 px-6 text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        {isPending && (
-                          <>
-                            <button
-                              onClick={() => openDepositModal(pay)}
-                              title="Registrar recebimento de sinal (reserva)"
-                              className="px-2.5 py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-[11px] font-semibold transition-colors whitespace-nowrap"
-                            >
-                              Baixar Sinal
-                            </button>
-                            <button
-                              onClick={() => markAsPaid(pay.id)}
-                              title="Quitar fatura integralmente"
-                              className="px-2.5 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[11px] font-semibold transition-colors whitespace-nowrap"
-                            >
-                              Quitar Total
-                            </button>
-                          </>
-                        )}
-
-                        {isSignalPaid && (
-                          <>
-                            <span className="text-[10px] font-mono text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20 whitespace-nowrap">
-                              Contrato Emitido ✓
-                            </span>
-                            <button
-                              onClick={() => markAsPaid(pay.id)}
-                              title="Receber e quitar o saldo restante na execução do ensaio"
-                              className="px-2.5 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[11px] font-semibold transition-colors whitespace-nowrap"
-                            >
-                              Quitar Saldo
-                            </button>
-                          </>
-                        )}
-
-                        {isFullyPaid && (
-                          <span className="text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
-                            Quitado 100%
-                          </span>
-                        )}
-
+                        <button
+                          onClick={() => openPayModalFor(pay)}
+                          title="Lançar pagamento vinculado a este cliente"
+                          className="px-2.5 py-1.5 rounded-xl bg-gold/10 hover:bg-gold/20 text-gold border border-gold/30 text-[10px] font-semibold transition-colors whitespace-nowrap"
+                        >
+                          + Lançar Pag.
+                        </button>
                         <button
                           onClick={() => handleDeletePayment(pay.id, pay.invoice)}
                           title="Excluir fatura"
-                          className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 transition-colors ml-1"
+                          className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 transition-colors"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -723,8 +762,14 @@ export default function PaymentsModule() {
               <X className="w-5 h-5" />
             </button>
 
-            <h2 className="text-xl font-serif font-bold text-white mb-1">Lançar Novo Pagamento</h2>
-            <p className="text-xs text-slate-400 mb-6">Cadastre uma fatura com valor total e sinal de agendamento</p>
+            <h2 className="text-xl font-serif font-bold text-white mb-1">
+              {isPayModalPrefilled ? 'Lançar Pagamento Vinculado' : 'Lançar Pagamento Avulso'}
+            </h2>
+            <p className="text-xs text-slate-400 mb-6">
+              {isPayModalPrefilled
+                ? 'Fatura pré-preenchida com os dados do cliente — confirme ou ajuste os valores'
+                : 'Cadastre uma fatura avulsa com valor total e sinal de agendamento'}
+            </p>
 
             <form onSubmit={handleAddPayment} className="space-y-4">
               <div>
