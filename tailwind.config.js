@@ -35,7 +35,7 @@ export default {
       fontFamily: {
         serif: ['"Playfair Display"', 'Georgia', 'serif'],
         display: ['"Cinzel"', 'serif'],
-        sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+        sans: ['"Airbnb Cereal VF"', 'Circular', '-apple-system', 'BlinkMacSystemFont', 'Roboto', '"Helvetica Neue"', 'sans-serif'],
         script: ['"Great Vibes"', 'cursive']
       },
       backgroundImage: {

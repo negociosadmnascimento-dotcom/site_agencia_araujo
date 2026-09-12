@@ -2,14 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Airbnb Cereal VF Typography (Official reference: https://www.airbnb.com.br) */
+@font-face {
+  font-family: 'Airbnb Cereal VF';
+  src: url('/fonts/AirbnbCerealVF_W_Wght.woff2') format('woff2 supports variations'),
+       url('/fonts/AirbnbCerealVF_W_Wght.woff2') format('woff2-variations'),
+       url('/fonts/AirbnbCerealVF_W_Wght.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Airbnb Cereal VF';
+  src: url('/fonts/AirbnbCerealVF_Italics_W_Wght.woff2') format('woff2 supports variations'),
+       url('/fonts/AirbnbCerealVF_Italics_W_Wght.woff2') format('woff2-variations'),
+       url('/fonts/AirbnbCerealVF_Italics_W_Wght.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;
+    font-family: 'Airbnb Cereal VF', Circular, -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', sans-serif;
   }
   
   body {
     background-color: #FAF9F6;
     color: #0F172A;
+    font-family: 'Airbnb Cereal VF', Circular, -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     transition: background-color 0.3s ease, color 0.3s ease;
   }
 

@@ -67,6 +67,42 @@ const INITIAL_BOOKINGS = [
   },
 ];
 
+const getInitialBookings = () => {
+  const now = new Date();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const y = now.getFullYear();
+  return [
+    ...INITIAL_BOOKINGS,
+    {
+      id: 'sess_curr_01',
+      date: `08/${m}/${y}`,
+      time: '09:00 - 12:00',
+      client: 'Dr. Roberto Silveira',
+      type: 'Retratos Corporativos Executive',
+      status: 'Confirmado',
+      location: 'Studio Barra da Tijuca (Av. das Américas, 3500)',
+    },
+    {
+      id: 'sess_curr_02',
+      date: `14/${m}/${y}`,
+      time: '16:30 - 18:30',
+      client: 'Mariana & Lucas Alencar',
+      type: 'Ensaio Pré-Wedding Sunset',
+      status: 'Confirmado',
+      location: 'Praia do Arpoador & Copacabana, RJ',
+    },
+    {
+      id: 'sess_curr_03',
+      date: `20/${m}/${y}`,
+      time: '16:30 - 18:30',
+      client: 'Camila Mendonça Ferreira',
+      type: 'Branding & Retratos Arquiteta',
+      status: 'Confirmado',
+      location: 'Parque Lage & Jardim Botânico, RJ',
+    },
+  ];
+};
+
 // Normalizador de datas (aceita DD/MM/AAAA ou AAAA-MM-DD)
 const toIsoDate = (dStr) => {
   if (!dStr) return '';
@@ -89,10 +125,16 @@ const toDisplayDate = (isoStr) => {
 };
 
 export default function ScheduleSection() {
-  // Inicializa visualização no mês de Março de 2026
-  const [currentYear, setCurrentYear] = useState(2026);
-  const [currentMonth, setCurrentMonth] = useState(2); // 0 = Jan, 2 = Março
-  const [selectedDate, setSelectedDate] = useState('2026-03-12');
+  // Inicializa visualização dinamicamente sempre no mês e dia atuais
+  const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(() => new Date().getMonth());
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  });
   const [selectedSlot, setSelectedSlot] = useState('16:30 - 18:30');
   const [sessions, setSessions] = useState([]);
 
@@ -133,11 +175,12 @@ export default function ScheduleSection() {
       if (stored) {
         setSessions(JSON.parse(stored));
       } else {
-        localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(INITIAL_BOOKINGS));
-        setSessions(INITIAL_BOOKINGS);
+        const init = getInitialBookings();
+        localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(init));
+        setSessions(init);
       }
     } catch {
-      setSessions(INITIAL_BOOKINGS);
+      setSessions(getInitialBookings());
     }
   };
 
