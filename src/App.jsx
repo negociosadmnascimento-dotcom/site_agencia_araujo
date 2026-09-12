@@ -18,6 +18,7 @@ import AdminLayout from './components/admin/AdminLayout';
 import SuperAdminLayout from './components/superadmin/SuperAdminLayout';
 import ContractAcceptanceView from './components/ContractAcceptanceView';
 import { useAuth } from './context/AuthContext';
+import { sanitizePipelineData } from './utils/clientResolution';
 
 export default function App() {
   const { isAuthenticated, isSuperAdmin, isTenantAdmin, user } = useAuth();
@@ -144,6 +145,9 @@ export default function App() {
         localStorage.setItem(DEDUP_KEY, 'done');
       }
     } catch (_) {}
+
+    // Saneamento e deduplicação estrita da esteira de contratação e agendamento
+    sanitizePipelineData();
 
     // 3. Handle popstate
     const handlePopState = () => {

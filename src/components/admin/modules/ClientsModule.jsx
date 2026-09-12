@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import { 
   Users, Search, Plus, Filter, MessageCircle, Mail, Phone, 
-  Star, DollarSign, Calendar, MoreVertical, CheckCircle2, UserCheck, X, Trash2
+  Star, DollarSign, Calendar, MoreVertical, CheckCircle2, UserCheck, X, Trash2,
+  Eye, EyeOff
 } from 'lucide-react';
 import WhatsAppIcon from '../../../components/icons/WhatsAppIcon';
 import { useAuth } from '../../../context/AuthContext';
+import { useValuesVisibility } from '../../../utils/valuesVisibility';
 
 export default function ClientsModule() {
   const { isSuperAdmin } = useAuth();
+  const { showValues, toggleShowValues } = useValuesVisibility();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -147,13 +150,25 @@ export default function ClientsModule() {
           </p>
         </div>
 
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="px-4 py-2.5 rounded-xl bg-gold-gradient text-dark-950 font-bold text-xs uppercase tracking-wider hover:brightness-110 shadow-lg shadow-gold/20 flex items-center gap-2 transition-all"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Cadastrar Novo Cliente</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={toggleShowValues}
+            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 text-xs flex items-center gap-1.5 transition-colors"
+            title="Ocultar / Exibir valores em R$"
+          >
+            {showValues ? <EyeOff className="w-4 h-4 text-gold" /> : <Eye className="w-4 h-4 text-gold" />}
+            <span>{showValues ? 'Ocultar Valores' : 'Revelar Valores'}</span>
+          </button>
+
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="px-4 py-2.5 rounded-xl bg-gold-gradient text-dark-950 font-bold text-xs uppercase tracking-wider hover:brightness-110 shadow-lg shadow-gold/20 flex items-center gap-2 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Cadastrar Novo Cliente</span>
+          </button>
+        </div>
       </div>
 
       {/* KPI Stats Dinâmicos */}
@@ -178,9 +193,9 @@ export default function ClientsModule() {
           </span>
         </div>
         <div className="p-4 rounded-2xl bg-slate-900/80 border border-white/10">
-          <span className="text-xs text-slate-400 uppercase font-semibold">LTV Médio (Super Admin)</span>
+          <span className="text-xs text-slate-400 uppercase font-semibold">LTV Médio</span>
           <p className="text-2xl font-serif font-bold text-emerald-400 mt-1">
-            {isSuperAdmin ? formattedLtv : '••••••••'}
+            {showValues ? formattedLtv : '••••••••'}
           </p>
           <span className="text-[10px] text-slate-400 font-medium">Ticket médio real por cliente</span>
         </div>
@@ -228,7 +243,7 @@ export default function ClientsModule() {
                 <th className="py-4 px-6">Segmento</th>
                 <th className="py-4 px-6">Contato & WhatsApp</th>
                 <th className="py-4 px-6">Ensaios</th>
-                {isSuperAdmin && <th className="py-4 px-6">Total Investido</th>}
+                <th className="py-4 px-6">Total Investido</th>
                 <th className="py-4 px-6">Status</th>
                 <th className="py-4 px-6 text-right">Ação</th>
               </tr>
@@ -276,11 +291,9 @@ export default function ClientsModule() {
                       {client.sessionsCount} sessões
                     </span>
                   </td>
-                  {isSuperAdmin && (
-                    <td className="py-4 px-6 font-mono font-bold text-gold">
-                      {client.totalSpent}
-                    </td>
-                  )}
+                  <td className="py-4 px-6 font-mono font-bold text-gold">
+                    {showValues ? client.totalSpent : '••••••••'}
+                  </td>
                   <td className="py-4 px-6">
                     <span
                       className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${

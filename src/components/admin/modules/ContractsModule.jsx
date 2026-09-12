@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { 
   FileCheck, Plus, Search, Check, 
-  ShieldCheck, X, RefreshCw, AlertTriangle, Clock, CheckCircle2 
+  ShieldCheck, X, RefreshCw, AlertTriangle, Clock, CheckCircle2,
+  Eye, EyeOff
 } from 'lucide-react';
 import WhatsAppIcon from '../../../components/icons/WhatsAppIcon';
 import { useAuth } from '../../../context/AuthContext';
 import { supabase, isSupabaseConfigured } from '../../../lib/supabaseClient';
+import { resolveClientPhone } from '../../../utils/clientResolution';
+import { useValuesVisibility } from '../../../utils/valuesVisibility';
 
 export default function ContractsModule() {
   const { isSuperAdmin, logActivity } = useAuth();
+  const { showValues, toggleShowValues } = useValuesVisibility();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('Todos');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -175,13 +179,14 @@ export default function ContractsModule() {
   // ── Open modal pre-filled from an existing contract card ──
   const openContractFor = (ctr) => {
     const confirmedSinal = getConfirmedSinal(ctr);
+    const resolvedPhone = resolveClientPhone(ctr.universalId, ctr.clientName, ctr.phone);
     setNewCtr({
       clientName: ctr.clientName || '',
       clientCpf: ctr.clientCpf && ctr.clientCpf !== 'Sob consulta' ? ctr.clientCpf : '',
       serviceTitle: ctr.serviceTitle || 'Prestação de Serviços Fotográficos & Cessão de Imagem',
       totalAmount: ctr.totalAmount ? ctr.totalAmount.replace('R$ ', '') : '',
       depositAmount: ctr.depositAmount && ctr.depositAmount !== 'R$ 0,00' ? ctr.depositAmount.replace('R$ ', '') : (confirmedSinal ? confirmedSinal.replace('R$ ', '') : ''),
-      phone: ctr.phone || '',
+      phone: resolvedPhone || '',
       eventDate: ctr.eventDate && ctr.eventDate !== 'A definir' ? ctr.eventDate : '',
       eventTime: ctr.eventTime || '',
     });
@@ -313,11 +318,27 @@ export default function ContractsModule() {
     const depNum = parseFloat((newCtr.depositAmount || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
     const remNum = Math.max(0, totalNum - depNum);
     const formatCurrency = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    // Reutiliza universalId do cliente se existir lead cadastrado
+    let assignedUid = existingCtr?.universalId;
+    if (!assignedUid || assignedUid.startsWith('CTR-')) {
+      try {
+        const leads = JSON.parse(localStorage.getItem('admin_leads') || '[]');
+        const matchLead = leads.find(l => l.name && l.name.toLowerCase().trim() === newCtr.clientName.toLowerCase().trim());
+        if (matchLead?.universalId) {
+          assignedUid = matchLead.universalId;
+        }
+      } catch (_) {}
+    }
+    if (!assignedUid) {
+      assignedUid = num;
+    }
+
+    const resolvedPhone = resolveClientPhone(assignedUid, newCtr.clientName, newCtr.phone);
 
     const created = {
       id: existingCtr?.id || `ctr_${Date.now()}`,
       contractNumber: num,
-      universalId: existingCtr?.universalId || num,
+      universalId: assignedUid,
       clientName: newCtr.clientName,
       clientCpf: newCtr.clientCpf || 'Sob consulta',
       serviceTitle: newCtr.serviceTitle,
@@ -332,7 +353,7 @@ export default function ContractsModule() {
       revisaoAt: null,
       token: existingCtr?.token || `ctr_token_${Math.random().toString(36).substring(2, 10)}`,
       statusColor: existingCtr?.statusColor || 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-      phone: newCtr.phone || '(21) 97429-9780',
+      phone: resolvedPhone,
     };
 
     setTimeout(() => {
@@ -343,15 +364,33 @@ export default function ContractsModule() {
       try {
         localStorage.setItem('admin_contracts', JSON.stringify(updatedContracts));
 
-        // Also create matching payment if none exists (avulso contract)
+        // Sincroniza ou atualiza pagamento correspondente sem criar duplicatas
         const existingPayments = JSON.parse(localStorage.getItem('admin_payments') || '[]');
-        const alreadyHasPay = existingPayments.some((p) => p.universalId === num);
-        if (!alreadyHasPay) {
+        const existingPayIdx = existingPayments.findIndex((p) => 
+          (assignedUid && p.universalId === assignedUid) ||
+          p.universalId === num ||
+          (created.clientName && p.clientName && p.clientName.toLowerCase().trim() === created.clientName.toLowerCase().trim())
+        );
+
+        if (existingPayIdx >= 0) {
+          // Atualiza pagamento existente com valores e telefone atualizados
+          const currPay = existingPayments[existingPayIdx];
+          existingPayments[existingPayIdx] = {
+            ...currPay,
+            amount: created.totalAmount || currPay.amount,
+            depositAmount: depNum > 0 ? created.depositAmount : currPay.depositAmount,
+            remainingAmount: created.remainingAmount || currPay.remainingAmount,
+            phone: resolvedPhone || currPay.phone,
+            universalId: assignedUid || currPay.universalId,
+          };
+          localStorage.setItem('admin_payments', JSON.stringify(existingPayments));
+        } else {
           const autoPayment = {
             id: `pay_${Date.now()}`,
             invoice: `FAT-${num.replace('CTR-', '')}`,
-            universalId: num,
+            universalId: assignedUid,
             clientName: created.clientName,
+            phone: resolvedPhone,
             description: `Contrato ${num} • ${created.serviceTitle}`,
             amount: created.totalAmount,
             depositAmount: created.depositAmount,
@@ -443,13 +482,25 @@ export default function ContractsModule() {
           </p>
         </div>
 
-        <button
-          onClick={openBlankContractModal}
-          className="px-4 py-2.5 rounded-xl bg-gold-gradient text-dark-950 font-bold text-xs uppercase tracking-wider hover:brightness-110 shadow-lg shadow-gold/20 flex items-center gap-2 transition-all"
-        >
-          <Plus className="w-4 h-4" />
-          <span>+ Emitir Contrato Avulso</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={toggleShowValues}
+            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 text-xs flex items-center gap-1.5 transition-colors"
+            title="Ocultar / Exibir valores em R$"
+          >
+            {showValues ? <EyeOff className="w-4 h-4 text-gold" /> : <Eye className="w-4 h-4 text-gold" />}
+            <span>{showValues ? 'Ocultar Valores' : 'Revelar Valores'}</span>
+          </button>
+
+          <button
+            onClick={openBlankContractModal}
+            className="px-4 py-2.5 rounded-xl bg-gold-gradient text-dark-950 font-bold text-xs uppercase tracking-wider hover:brightness-110 shadow-lg shadow-gold/20 flex items-center gap-2 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span>+ Emitir Contrato Avulso</span>
+          </button>
+        </div>
       </div>
 
       {/* Security alert */}
@@ -559,16 +610,16 @@ export default function ContractsModule() {
               <div className="text-left lg:text-right">
                 <span className="text-[10px] uppercase font-semibold text-slate-400 block">Valor Contratual</span>
                 <span className="text-xl font-serif font-bold text-white block">
-                  {isSuperAdmin ? ctr.totalAmount : '••••••••'}
+                  {showValues ? ctr.totalAmount : '••••••••'}
                 </span>
                 {ctr.depositAmount && ctr.depositAmount !== 'R$ 0,00' && (
                   <span className="text-[10px] text-cyan-300 font-sans block mt-0.5">
-                    Sinal Pago: <strong>{isSuperAdmin ? ctr.depositAmount : '••••'}</strong>
+                    Sinal Pago: <strong>{showValues ? ctr.depositAmount : '••••'}</strong>
                   </span>
                 )}
                 {ctr.remainingAmount && ctr.remainingAmount !== 'R$ 0,00' && (
                   <span className="text-[10px] text-amber-300 font-sans block">
-                    Saldo a Acertar: <strong>{isSuperAdmin ? ctr.remainingAmount : '••••'}</strong>
+                    Saldo a Acertar: <strong>{showValues ? ctr.remainingAmount : '••••'}</strong>
                   </span>
                 )}
               </div>
@@ -592,7 +643,7 @@ export default function ContractsModule() {
                   {/* Se JÁ assinou: Botão para Enviar Agradecimento Oficial no WhatsApp */}
                   {ctr.signedStatus === 'Assinado Digitalmente' && (
                     <a
-                      href={`https://wa.me/55${(ctr.phone || '').replace(/\D/g, '')}?text=${encodeURIComponent(buildWhatsAppThankYouMsg(ctr))}`}
+                      href={`https://wa.me/55${(resolveClientPhone(ctr.universalId, ctr.clientName, ctr.phone) || '').replace(/\D/g, '')}?text=${encodeURIComponent(buildWhatsAppThankYouMsg(ctr))}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="px-3 py-1.5 rounded-xl bg-gold/15 hover:bg-gold/25 border border-gold/40 text-gold-300 text-[10px] font-bold flex items-center gap-1.5 transition-colors shadow-sm"
@@ -628,11 +679,23 @@ export default function ContractsModule() {
                     </button>
                   )}
 
-                  {/* WhatsApp — envia contrato completo + link digital */}
+                  {/* WhatsApp — envia contrato completo + link digital com telefone correto */}
                   <a
-                    href={`https://wa.me/55${(ctr.phone || '').replace(/\D/g, '')}?text=${encodeURIComponent(buildWhatsAppMsg(ctr))}`}
+                    href={`https://wa.me/55${(resolveClientPhone(ctr.universalId, ctr.clientName, ctr.phone) || '').replace(/\D/g, '')}?text=${encodeURIComponent(buildWhatsAppMsg(ctr))}`}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={(e) => {
+                      const targetPhone = resolveClientPhone(ctr.universalId, ctr.clientName, ctr.phone);
+                      const cleanDigits = (targetPhone || '').replace(/\D/g, '');
+                      if (!cleanDigits || cleanDigits.length < 10) {
+                        e.preventDefault();
+                        const inputPhone = prompt(`Informe o WhatsApp de ${ctr.clientName} (com DDD, ex: 21990689864):`);
+                        if (inputPhone && inputPhone.replace(/\D/g, '').length >= 10) {
+                          const digits = inputPhone.replace(/\D/g, '');
+                          window.open(`https://wa.me/55${digits}?text=${encodeURIComponent(buildWhatsAppMsg({ ...ctr, phone: inputPhone }))}`, '_blank');
+                        }
+                      }
+                    }}
                     className="px-3 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 transition-colors flex items-center gap-1.5 text-xs font-semibold"
                     title="Enviar contrato e link oficial de aceite via WhatsApp"
                   >

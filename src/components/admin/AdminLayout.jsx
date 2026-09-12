@@ -3,10 +3,11 @@ import {
   LayoutDashboard, Globe, Users, UserCheck, Calendar, FileText, 
   History, MessageSquareQuote, Image, Inbox, MessageCircle, 
   CreditCard, FileCheck, LogOut, ExternalLink, Menu, 
-  X, ChevronRight, Palette, CheckCircle2
+  X, ChevronRight, Palette, CheckCircle2, Eye, EyeOff
 } from 'lucide-react';
 import { useAuth, DEFAULT_TENANT_SETTINGS } from '../../context/AuthContext';
 import { supabase, isSupabaseConfigured } from '../../lib/supabaseClient';
+import { useValuesVisibility } from '../../utils/valuesVisibility';
 
 // Module Components
 import DashboardModule from './modules/DashboardModule';
@@ -26,6 +27,7 @@ import CustomizationModule from './modules/CustomizationModule';
 
 export default function AdminLayout({ onBackToSite }) {
   const { user, logout, logActivity } = useAuth();
+  const { showValues, toggleShowValues } = useValuesVisibility();
   const [activeModule, setActiveModule] = useState('Dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [counts, setCounts] = useState({ leads: 0, sessions: 0, forms: 0 });
@@ -136,10 +138,19 @@ export default function AdminLayout({ onBackToSite }) {
           pendingReminders.push(ctr);
         }
 
-        // 2. Despachados explicitamente pós-aceite
+        // 2. Despachados explicitamente pós-aceite (apenas com contrato assinado)
         for (const p of explicitPending) {
           if (!p || !p.clientName) continue;
           const uid = p.universalId || p.id;
+          const matchingCtr = contracts.find(c => 
+            (uid && (c.universalId === uid || c.contractNumber === uid)) ||
+            (p.contractNumber && c.contractNumber === p.contractNumber) ||
+            (c.clientName && c.clientName.toLowerCase().trim() === p.clientName.toLowerCase().trim())
+          );
+          if (!matchingCtr || (matchingCtr.signedStatus !== 'Assinado Digitalmente' && matchingCtr.signedStatus !== 'Contrato Aceito')) {
+            continue;
+          }
+
           if (dismissedReminders.includes(uid)) continue;
           if (scheduledUids.has(uid) || scheduledNames.has((p.clientName || '').toLowerCase().trim())) continue;
           if (!isPaymentConfirmed(uid, p.clientName)) continue;
@@ -423,6 +434,16 @@ export default function AdminLayout({ onBackToSite }) {
           </div>
 
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={toggleShowValues}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white text-xs font-semibold transition-colors"
+              title={showValues ? 'Ocultar valores em R$ no painel' : 'Visualizar valores em R$ no painel'}
+            >
+              {showValues ? <EyeOff className="w-3.5 h-3.5 text-gold" /> : <Eye className="w-3.5 h-3.5 text-gold" />}
+              <span className="hidden sm:inline">{showValues ? 'Ocultar Valores' : 'Ver Valores'}</span>
+            </button>
+
             <button
               onClick={() => setActiveModule('personalizar')}
               className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gold/10 hover:bg-gold/20 border border-gold/30 text-gold-300 text-xs font-semibold transition-colors"

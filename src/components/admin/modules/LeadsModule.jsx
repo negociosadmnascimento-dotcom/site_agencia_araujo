@@ -317,8 +317,24 @@ export default function LeadsModule() {
       // 2. Disparo Automático para o Módulo de Pagamentos (admin_payments)
       try {
         const payments = JSON.parse(localStorage.getItem("admin_payments") || "[]");
-        const existingPay = payments.find((p) => p.universalId === universalId);
-        if (!existingPay) {
+        const leadPhoneNorm = (leadToMove.phone || "").replace(/\D/g, "");
+        const leadNameNorm = (leadToMove.name || "").toLowerCase().trim();
+        const existingPayIdx = payments.findIndex((p) => 
+          (p.universalId && p.universalId === universalId) ||
+          (leadNameNorm && p.clientName && p.clientName.toLowerCase().trim() === leadNameNorm) ||
+          (leadPhoneNorm && p.phone && (p.phone || "").replace(/\D/g, "") === leadPhoneNorm)
+        );
+
+        if (existingPayIdx >= 0) {
+          payments[existingPayIdx] = {
+            ...payments[existingPayIdx],
+            universalId: payments[existingPayIdx].universalId || universalId,
+            clientName: leadToMove.name,
+            phone: leadToMove.phone || payments[existingPayIdx].phone,
+            email: leadToMove.email || payments[existingPayIdx].email,
+          };
+          localStorage.setItem("admin_payments", JSON.stringify(payments));
+        } else {
           const now = new Date();
           const year = now.getFullYear();
           const seq = Math.floor(100 + Math.random() * 900);

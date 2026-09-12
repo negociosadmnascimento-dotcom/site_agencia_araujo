@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import { 
   FileText, Plus, Search, Filter, MessageCircle, Copy, Check, 
-  ExternalLink, DollarSign, Calendar, Clock, ShieldCheck, X, Trash2
+  ExternalLink, DollarSign, Calendar, Clock, ShieldCheck, X, Trash2,
+  Eye, EyeOff
 } from 'lucide-react';
 import WhatsAppIcon from '../../../components/icons/WhatsAppIcon';
 import { useAuth } from '../../../context/AuthContext';
+import { useValuesVisibility } from '../../../utils/valuesVisibility';
 
 export default function ProposalsModule() {
   const { isSuperAdmin, logActivity } = useAuth();
+  const { showValues, toggleShowValues } = useValuesVisibility();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('Todos');
   const [copiedId, setCopiedId] = useState(null);
@@ -95,13 +98,25 @@ export default function ProposalsModule() {
           </p>
         </div>
 
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="px-4 py-2.5 rounded-xl bg-gold-gradient text-dark-950 font-bold text-xs uppercase tracking-wider hover:brightness-110 shadow-lg shadow-gold/20 flex items-center gap-2 transition-all"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Criar Nova Proposta</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={toggleShowValues}
+            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 text-xs flex items-center gap-1.5 transition-colors"
+            title="Ocultar / Exibir valores em R$"
+          >
+            {showValues ? <EyeOff className="w-4 h-4 text-gold" /> : <Eye className="w-4 h-4 text-gold" />}
+            <span>{showValues ? 'Ocultar Valores' : 'Revelar Valores'}</span>
+          </button>
+
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="px-4 py-2.5 rounded-xl bg-gold-gradient text-dark-950 font-bold text-xs uppercase tracking-wider hover:brightness-110 shadow-lg shadow-gold/20 flex items-center gap-2 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Criar Nova Proposta</span>
+          </button>
+        </div>
       </div>
 
       {/* Security notice */}
@@ -169,7 +184,7 @@ export default function ProposalsModule() {
               <div className="text-left lg:text-right">
                 <span className="text-[10px] uppercase font-semibold text-slate-400 block">Valor da Proposta</span>
                 <span className="text-xl font-serif font-bold text-white block">
-                  {isSuperAdmin ? prop.amount : '••••••••'}
+                  {showValues ? prop.amount : '••••••••'}
                 </span>
                 <span className="text-[11px] font-mono text-slate-500">Validade: {prop.validUntil}</span>
               </div>

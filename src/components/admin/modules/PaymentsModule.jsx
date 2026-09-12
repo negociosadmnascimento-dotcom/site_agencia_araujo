@@ -5,10 +5,12 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { supabase, isSupabaseConfigured } from '../../../lib/supabaseClient';
+import { resolveClientPhone } from '../../../utils/clientResolution';
+import { useValuesVisibility } from '../../../utils/valuesVisibility';
 
 export default function PaymentsModule() {
   const { isSuperAdmin, logActivity } = useAuth();
-  const [showNumbers, setShowNumbers] = useState(true);
+  const { showValues, toggleShowValues } = useValuesVisibility();
   const [filterStatus, setFilterStatus] = useState('Todos');
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -53,7 +55,7 @@ export default function PaymentsModule() {
 
   // Abre o modal de pagamento avulso (em branco)
   const openBlankPayModal = () => {
-    setNewPay({ clientName: '', description: '', amount: '', depositAmount: '', method: 'PIX Instantâneo', installments: '1', contractId: '', dueDate: '' });
+    setNewPay({ clientName: '', phone: '', description: '', amount: '', depositAmount: '', method: 'PIX Instantâneo', installments: '1', contractId: '', dueDate: '' });
     setIsPayModalPrefilled(false);
     setEditingPayId(null);
     setShowAddModal(true);
@@ -61,8 +63,10 @@ export default function PaymentsModule() {
 
   // Abre o modal de pagamento pré-preenchido com dados de um registro existente
   const openPayModalFor = (pay) => {
+    const resolvedPhone = resolveClientPhone(pay.universalId, pay.clientName, pay.phone);
     setNewPay({
       clientName: pay.clientName || '',
+      phone: resolvedPhone || '',
       description: pay.description || '',
       amount: pay.amount ? pay.amount.replace('R$ ', '') : '',
       depositAmount: pay.depositAmount && pay.depositAmount !== 'R$ 0,00' ? pay.depositAmount.replace('R$ ', '') : '',
@@ -91,61 +95,85 @@ export default function PaymentsModule() {
     try {
       const contracts = JSON.parse(localStorage.getItem('admin_contracts') || '[]');
       const targetUid = pay.universalId;
-      const exists = contracts.some(c => c.universalId === targetUid);
-      if (!exists) {
-        const now = new Date();
-        const year = now.getFullYear();
-        const seq = Math.floor(100 + Math.random() * 900);
-        const ctrNum = `CTR-${year}-${seq}`;
-        const token = `ctr_token_${Math.random().toString(36).substring(2, 10)}`;
+      const clientNameNorm = (pay.clientName || '').toLowerCase().trim();
+      const resolvedPhone = resolveClientPhone(targetUid, pay.clientName, pay.phone);
 
-        const totalNum = parseAmount(pay.amount);
-        const depNum = parseAmount(pay.depositAmount);
-        const remNum = Math.max(0, totalNum - depNum);
+      // Trava de deduplicação estrita: verifica se já existe contrato para este cliente
+      const existingIdx = contracts.findIndex(c => 
+        (targetUid && c.universalId === targetUid) ||
+        (c.contractNumber && targetUid && c.contractNumber === targetUid) ||
+        (c.clientName && c.clientName.toLowerCase().trim() === clientNameNorm)
+      );
 
-        const newContract = {
-          id: `ctr_${Date.now()}`,
-          contractNumber: ctrNum,
-          universalId: targetUid || `CLI-${year}-${seq}-${pay.clientName.replace(/\s+/g, '').slice(0, 6).toUpperCase()}`,
-          clientName: pay.clientName,
-          clientCpf: 'Sob consulta',
-          phone: pay.phone || '(21) 97553-0689',
-          serviceTitle: pay.description || 'Prestação de Serviços Fotográficos & Cessão de Imagem',
-          eventDate: pay.dueDate || 'A definir',
-          totalAmount: pay.amount,
-          depositAmount: pay.depositAmount || 'R$ 0,00',
-          remainingAmount: pay.remainingAmount || formatCurrency(remNum),
-          signedStatus: 'Aguardando Assinatura',
-          signedAt: null,
-          token,
-          statusColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+      if (existingIdx >= 0) {
+        // Atualiza contrato existente sem duplicar
+        const existing = contracts[existingIdx];
+        const updated = {
+          ...existing,
+          universalId: existing.universalId || targetUid,
+          phone: resolvedPhone || existing.phone,
+          depositAmount: pay.depositAmount && pay.depositAmount !== 'R$ 0,00' ? pay.depositAmount : existing.depositAmount,
+          remainingAmount: pay.remainingAmount || existing.remainingAmount,
+          totalAmount: pay.amount || existing.totalAmount,
         };
-        contracts.unshift(newContract);
+        contracts[existingIdx] = updated;
         localStorage.setItem('admin_contracts', JSON.stringify(contracts));
-
-        // Sincroniza contrato com o Supabase para validação pública no link
-        if (isSupabaseConfigured && supabase) {
-          try {
-            supabase.from('contratos').upsert({
-              token: newContract.token,
-              universal_id: newContract.universalId,
-              contract_number: newContract.contractNumber,
-              client_name: newContract.clientName,
-              client_cpf: newContract.clientCpf,
-              phone: newContract.phone,
-              service_title: newContract.serviceTitle,
-              total_amount: newContract.totalAmount,
-              deposit_amount: newContract.depositAmount,
-              remaining_amount: newContract.remainingAmount,
-              event_date: newContract.eventDate,
-              status: newContract.signedStatus,
-            }, { onConflict: 'token' }).catch(() => {});
-          } catch (_) {}
-        }
-
-        logActivity?.('AUTO_CONTRATO', 'contratos', `Contrato ${ctrNum} emitido automaticamente após confirmação financeira [${newContract.universalId}]`);
-        return newContract;
+        return updated;
       }
+
+      // Se não existe, cria novo contrato
+      const now = new Date();
+      const year = now.getFullYear();
+      const seq = Math.floor(100 + Math.random() * 900);
+      const ctrNum = `CTR-${year}-${seq}`;
+      const token = `ctr_token_${Math.random().toString(36).substring(2, 10)}`;
+
+      const totalNum = parseAmount(pay.amount);
+      const depNum = parseAmount(pay.depositAmount);
+      const remNum = Math.max(0, totalNum - depNum);
+
+      const newContract = {
+        id: `ctr_${Date.now()}`,
+        contractNumber: ctrNum,
+        universalId: targetUid || `CLI-${year}-${seq}-${pay.clientName.replace(/\s+/g, '').slice(0, 6).toUpperCase()}`,
+        clientName: pay.clientName,
+        clientCpf: 'Sob consulta',
+        phone: resolvedPhone,
+        serviceTitle: pay.description || 'Prestação de Serviços Fotográficos & Cessão de Imagem',
+        eventDate: pay.dueDate || 'A definir',
+        totalAmount: pay.amount,
+        depositAmount: pay.depositAmount || 'R$ 0,00',
+        remainingAmount: pay.remainingAmount || formatCurrency(remNum),
+        signedStatus: 'Aguardando Assinatura',
+        signedAt: null,
+        token,
+        statusColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+      };
+      contracts.unshift(newContract);
+      localStorage.setItem('admin_contracts', JSON.stringify(contracts));
+
+      // Sincroniza contrato com o Supabase para validação pública no link
+      if (isSupabaseConfigured && supabase) {
+        try {
+          supabase.from('contratos').upsert({
+            token: newContract.token,
+            universal_id: newContract.universalId,
+            contract_number: newContract.contractNumber,
+            client_name: newContract.clientName,
+            client_cpf: newContract.clientCpf,
+            phone: newContract.phone,
+            service_title: newContract.serviceTitle,
+            total_amount: newContract.totalAmount,
+            deposit_amount: newContract.depositAmount,
+            remaining_amount: newContract.remainingAmount,
+            event_date: newContract.eventDate,
+            status: newContract.signedStatus,
+          }, { onConflict: 'token' }).catch(() => {});
+        } catch (_) {}
+      }
+
+      logActivity?.('AUTO_CONTRATO', 'contratos', `Contrato ${ctrNum} emitido automaticamente após confirmação financeira [${newContract.universalId}]`);
+      return newContract;
     } catch (err) {
       console.error('Erro ao gerar contrato automático:', err);
     }
@@ -185,11 +213,14 @@ export default function PaymentsModule() {
         ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
         : 'bg-amber-500/20 text-amber-300 border-amber-500/30';
 
+    const resolvedPhone = newPay.phone || resolveClientPhone(universalId, newPay.clientName);
+
     const created = {
       id: `pay_${Date.now()}`,
       invoice: inv,
       universalId,
       clientName: newPay.clientName,
+      phone: resolvedPhone,
       description: newPay.description || 'Ensaio Fotográfico',
       amount: formattedAmount,
       depositAmount: formattedDeposit,
@@ -211,9 +242,24 @@ export default function PaymentsModule() {
             ...created,
             id: p.id,
             invoice: p.invoice || created.invoice,
+            phone: resolvedPhone || p.phone,
           } : p);
         } else {
-          next = [created, ...prev];
+          // Previne duplicação acidental se fatura com mesmo universalId ou nome já existir
+          const dupIdx = prev.findIndex(p => 
+            (p.universalId && p.universalId === universalId) || 
+            (p.clientName && p.clientName.toLowerCase().trim() === newPay.clientName.toLowerCase().trim())
+          );
+          if (dupIdx >= 0) {
+            next = prev.map((p, idx) => idx === dupIdx ? {
+              ...p,
+              ...created,
+              id: p.id,
+              invoice: p.invoice || created.invoice,
+            } : p);
+          } else {
+            next = [created, ...prev];
+          }
         }
         try { localStorage.setItem('admin_payments', JSON.stringify(next)); } catch (_) {}
         return next;
@@ -417,16 +463,15 @@ export default function PaymentsModule() {
         </div>
 
         <div className="flex items-center gap-3">
-          {isSuperAdmin && (
-            <button
-              onClick={() => setShowNumbers(!showNumbers)}
-              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 text-xs flex items-center gap-1.5"
-              title="Ocultar/Exibir valores"
-            >
-              {showNumbers ? <EyeOff className="w-4 h-4 text-gold" /> : <Eye className="w-4 h-4 text-gold" />}
-              <span>{showNumbers ? 'Ocultar Valores' : 'Revelar Valores'}</span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={toggleShowValues}
+            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 text-xs flex items-center gap-1.5 transition-colors"
+            title="Ocultar / Exibir valores em R$"
+          >
+            {showValues ? <EyeOff className="w-4 h-4 text-gold" /> : <Eye className="w-4 h-4 text-gold" />}
+            <span>{showValues ? 'Ocultar Valores' : 'Revelar Valores'}</span>
+          </button>
 
           <button
             onClick={openBlankPayModal}
@@ -458,7 +503,7 @@ export default function PaymentsModule() {
         <div className="p-5 rounded-3xl bg-slate-900/70 border border-white/10">
           <span className="text-xs uppercase font-semibold text-slate-400">Total Recebido (Mês)</span>
           <p className="text-2xl font-serif font-bold text-emerald-400 mt-2">
-            {isSuperAdmin && showNumbers ? totalPaid.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ ••••••••'}
+            {showValues ? totalPaid.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ ••••••••'}
           </p>
           <span className="text-[10px] text-slate-500 font-mono">
             {paidPayments.length} pagamento(s) confirmado(s)
@@ -468,7 +513,7 @@ export default function PaymentsModule() {
         <div className="p-5 rounded-3xl bg-slate-900/70 border border-white/10">
           <span className="text-xs uppercase font-semibold text-slate-400">A Receber / Pendente</span>
           <p className="text-2xl font-serif font-bold text-amber-400 mt-2">
-            {isSuperAdmin && showNumbers ? totalPending.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ ••••••••'}
+            {showValues ? totalPending.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ ••••••••'}
           </p>
           <span className="text-[10px] text-slate-500 font-mono">
             {pendingPayments.length} fatura(s) em aberto
@@ -478,7 +523,7 @@ export default function PaymentsModule() {
         <div className="p-5 rounded-3xl bg-slate-900/70 border border-white/10">
           <span className="text-xs uppercase font-semibold text-slate-400">Previsão Faturamento Total</span>
           <p className="text-2xl font-serif font-bold text-white mt-2">
-            {isSuperAdmin && showNumbers ? totalForecast.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ ••••••••'}
+            {showValues ? totalForecast.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ ••••••••'}
           </p>
           <span className="text-[10px] text-gold-300 font-mono">
             {payments.length} lançamento(s) no total
@@ -566,16 +611,16 @@ export default function PaymentsModule() {
                     <td className="py-4 px-6 font-mono">
                       <div className="space-y-0.5">
                         <span className="font-bold text-white text-sm block">
-                          {isSuperAdmin && showNumbers ? pay.amount : '••••••••'}
+                          {showValues ? pay.amount : '••••••••'}
                         </span>
                         {depNum > 0 && (
                           <span className="text-[10px] text-cyan-300 block font-sans">
-                            Sinal: <strong>{isSuperAdmin && showNumbers ? pay.depositAmount : '••••'}</strong>
+                            Sinal: <strong>{showValues ? pay.depositAmount : '••••'}</strong>
                           </span>
                         )}
                         {pay.remainingAmount && parseAmount(pay.remainingAmount) > 0 && !isFullyPaid && (
                           <span className="text-[10px] text-amber-300 block font-sans">
-                            Saldo: <strong>{isSuperAdmin && showNumbers ? pay.remainingAmount : '••••'}</strong>
+                            Saldo: <strong>{showValues ? pay.remainingAmount : '••••'}</strong>
                           </span>
                         )}
                       </div>

@@ -97,10 +97,24 @@ export default function ScheduleModule() {
         });
       }
 
-      // 2. Fila explícita despachada pós-aceite de contrato (garantindo esteira prévia)
+      // 2. Fila explícita despachada pós-aceite de contrato (garantindo esteira prévia e contrato assinado)
+      const validPending = [];
       for (const p of explicitPending) {
         if (!p || !p.clientName) continue;
         const uid = p.universalId || p.id;
+        const matchingCtr = contracts.find(c => 
+          (uid && (c.universalId === uid || c.contractNumber === uid)) ||
+          (p.contractNumber && c.contractNumber === p.contractNumber) ||
+          (c.clientName && c.clientName.toLowerCase().trim() === p.clientName.toLowerCase().trim())
+        );
+
+        // Se não tem contrato assinado/aceito, expurga da fila da agenda
+        if (!matchingCtr || (matchingCtr.signedStatus !== 'Assinado Digitalmente' && matchingCtr.signedStatus !== 'Contrato Aceito')) {
+          continue;
+        }
+
+        validPending.push(p);
+
         if (dismissed.includes(uid)) continue;
         if (scheduledUids.has(uid) || scheduledNames.has((p.clientName || '').toLowerCase().trim())) continue;
         if (!isPaymentConfirmed(uid, p.clientName)) continue;
@@ -111,6 +125,10 @@ export default function ScheduleModule() {
           uid,
           sourceType: 'pipeline',
         });
+      }
+
+      if (validPending.length !== explicitPending.length) {
+        try { localStorage.setItem('admin_pending_schedules', JSON.stringify(validPending)); } catch (_) {}
       }
 
       setPendingReminders(list);
