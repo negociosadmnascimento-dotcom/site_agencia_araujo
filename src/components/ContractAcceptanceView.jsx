@@ -41,28 +41,29 @@ export default function ContractAcceptanceView({ onBackToSite }) {
           const { data, error } = await supabase
             .from('contratos')
             .select('*')
-            .eq('token', token)
-            .maybeSingle();
+            .or(`token.eq.${token},contract_number.eq.${token},universal_id.eq.${token}`)
+            .limit(1);
 
-          if (!error && data) {
+          if (!error && data && data.length > 0) {
+            const row = data[0];
             found = {
-              id: data.id,
-              contractNumber: data.contract_number,
-              universalId: data.universal_id,
-              clientName: data.client_name,
-              clientCpf: data.client_cpf,
-              phone: data.phone,
-              serviceTitle: data.service_title,
-              totalAmount: data.total_amount,
-              depositAmount: data.deposit_amount,
-              remainingAmount: data.remaining_amount,
-              eventDate: data.event_date,
-              eventTime: data.event_time,
-              signedStatus: data.status === 'aceito' || data.status === 'Assinado Digitalmente' ? 'Assinado Digitalmente' : (data.status || 'Aguardando Assinatura'),
-              signedAt: data.assinado_em ? new Date(data.assinado_em).toLocaleString('pt-BR') : null,
-              revisaoSolicitada: Boolean(data.revisao_solicitada),
-              revisaoAt: data.revisao_at,
-              token: data.token,
+              id: row.id,
+              contractNumber: row.contract_number,
+              universalId: row.universal_id,
+              clientName: row.client_name,
+              clientCpf: row.client_cpf,
+              phone: row.phone,
+              serviceTitle: row.service_title,
+              totalAmount: row.total_amount,
+              depositAmount: row.deposit_amount,
+              remainingAmount: row.remaining_amount,
+              eventDate: row.event_date,
+              eventTime: row.event_time,
+              signedStatus: row.status === 'aceito' || row.status === 'Assinado Digitalmente' ? 'Assinado Digitalmente' : (row.status || 'Aguardando Assinatura'),
+              signedAt: row.assinado_em ? new Date(row.assinado_em).toLocaleString('pt-BR') : null,
+              revisaoSolicitada: Boolean(row.revisao_solicitada),
+              revisaoAt: row.revisao_at,
+              token: row.token,
             };
           }
         } catch (err) {
@@ -74,7 +75,11 @@ export default function ContractAcceptanceView({ onBackToSite }) {
       if (!found) {
         try {
           const localList = JSON.parse(localStorage.getItem('admin_contracts') || '[]');
-          const localMatch = localList.find(c => c.token === token);
+          const localMatch = localList.find(c => 
+            c.token === token || 
+            c.contractNumber === token || 
+            c.universalId === token
+          );
           if (localMatch) {
             found = localMatch;
           }
@@ -283,7 +288,7 @@ export default function ContractAcceptanceView({ onBackToSite }) {
             </p>
             <div className="pt-2">
               <a
-                href={`https://wa.me/5521974299780?text=${encodeURIComponent(`Olá Agências Araújo! Acabei de aceitar digitalmente o contrato ${contract.contractNumber} [ID: ${contract.universalId || contract.contractNumber}]. Obrigado pela preferência! 🎉`)}`}
+                href={`https://wa.me/5521974299780?text=${encodeURIComponent(`🎉 Olá Agências Araújo! Confirmo o aceite digital do meu contrato ${contract.contractNumber} [ID: ${contract.universalId || contract.contractNumber}].\n\nObrigado pela preferência e pela confiança na Agências Araújo! 📷✨\n"Eternizando momentos, contando histórias com arte, sensibilidade e excelência."`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-dark-950 font-bold text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/25 transition-all"

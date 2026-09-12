@@ -176,6 +176,7 @@ export const sanitizePipelineData = () => {
             continue; // descarta duplicata CTR-2026-690
           }
           seenCtrNames.add('willian');
+          const isAlreadySigned = ctr.signedStatus === 'Assinado Digitalmente' || ctr.signedStatus === 'aceito';
           uniqueContracts.push({
             ...ctr,
             id: ctr.id || 'ctr_willian_canonical',
@@ -185,10 +186,13 @@ export const sanitizePipelineData = () => {
             clientCpf: ctr.clientCpf && ctr.clientCpf !== '0000000000' ? ctr.clientCpf : 'Sob consulta',
             phone: '(21) 99068-9864',
             serviceTitle: 'Ensaio Retrato Corporativo',
-            signedStatus: 'Aguardando Assinatura', // NÃO ACEITO AINDA (impede entrada na agenda)
-            signedAt: null,
-            revisaoSolicitada: false,
-            statusColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+            signedStatus: isAlreadySigned ? 'Assinado Digitalmente' : (ctr.signedStatus || 'Aguardando Assinatura'),
+            signedAt: isAlreadySigned ? ctr.signedAt : null,
+            revisaoSolicitada: isAlreadySigned ? false : Boolean(ctr.revisaoSolicitada),
+            token: ctr.token || 'ctr_token_61im7hw6',
+            statusColor: isAlreadySigned
+              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+              : 'bg-amber-500/20 text-amber-300 border-amber-500/30',
           });
           seenCtrUids.add('CLI-2026-959-WILLIA');
           contractsChanged = true;

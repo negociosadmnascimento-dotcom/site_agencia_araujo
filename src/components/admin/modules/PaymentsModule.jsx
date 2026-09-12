@@ -124,9 +124,31 @@ export default function PaymentsModule() {
           depositAmount: pay.depositAmount && pay.depositAmount !== 'R$ 0,00' ? pay.depositAmount : existing.depositAmount,
           remainingAmount: pay.remainingAmount || existing.remainingAmount,
           totalAmount: pay.amount || existing.totalAmount,
+          token: existing.token || `ctr_token_${Math.random().toString(36).substring(2, 10)}`,
         };
         contracts[existingIdx] = updated;
         localStorage.setItem('admin_contracts', JSON.stringify(contracts));
+
+        // Sincroniza contrato atualizado no Supabase para acesso público do link
+        if (isSupabaseConfigured && supabase && updated.token) {
+          try {
+            supabase.from('contratos').upsert({
+              token: updated.token,
+              universal_id: updated.universalId,
+              contract_number: updated.contractNumber,
+              client_name: updated.clientName,
+              client_cpf: updated.clientCpf || 'Sob consulta',
+              phone: updated.phone,
+              service_title: updated.serviceTitle,
+              total_amount: updated.totalAmount,
+              deposit_amount: updated.depositAmount,
+              remaining_amount: updated.remainingAmount,
+              event_date: updated.eventDate || 'A definir',
+              status: updated.signedStatus || 'Aguardando Assinatura',
+            }, { onConflict: 'token' }).catch(e => console.warn('Supabase auto-contract update error:', e));
+          } catch (_) {}
+        }
+
         return updated;
       }
 

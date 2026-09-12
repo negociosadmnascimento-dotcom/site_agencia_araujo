@@ -36,18 +36,59 @@ export default function ContractsModule() {
     }
   });
 
-  // ── Sincronização em tempo real com o Supabase ──
+  // ── Helper: Upsert de contrato no Supabase garantindo campos padronizados ──
+  const upsertContractToSupabase = async (ctr) => {
+    if (!isSupabaseConfigured || !supabase || !ctr) return null;
+    const token = ctr.token || `ctr_token_${Math.random().toString(36).substring(2, 10)}`;
+    const resolvedPhone = resolveClientPhone(ctr.universalId, ctr.clientName, ctr.phone) || ctr.phone || '';
+    const payload = {
+      token,
+      universal_id: ctr.universalId || ctr.contractNumber,
+      contract_number: ctr.contractNumber,
+      client_name: ctr.clientName,
+      client_cpf: ctr.clientCpf && ctr.clientCpf !== '0000000000' ? ctr.clientCpf : 'Sob consulta',
+      phone: resolvedPhone,
+      service_title: ctr.serviceTitle || 'Prestação de Serviços Fotográficos & Cessão de Imagem',
+      total_amount: ctr.totalAmount || 'R$ 0,00',
+      deposit_amount: ctr.depositAmount || 'R$ 0,00',
+      remaining_amount: ctr.remainingAmount || 'R$ 0,00',
+      event_date: ctr.eventDate || 'A definir',
+      event_time: ctr.eventTime || '',
+      status: ctr.signedStatus === 'Assinado Digitalmente' ? 'Assinado Digitalmente' : (ctr.signedStatus || 'Aguardando Assinatura'),
+      assinado_em: ctr.signedStatus === 'Assinado Digitalmente' && ctr.signedAt ? new Date().toISOString() : null,
+      revisao_solicitada: Boolean(ctr.revisaoSolicitada),
+      revisao_at: ctr.revisaoAt || null,
+    };
+    try {
+      const { error } = await supabase
+        .from('contratos')
+        .upsert(payload, { onConflict: 'token' });
+      if (error) {
+        console.warn('Erro ao persistir contrato no Supabase:', error);
+      }
+      return { ...ctr, token };
+    } catch (err) {
+      console.warn('Exceção ao persistir contrato no Supabase:', err);
+      return ctr;
+    }
+  };
+
+  // ── Sincronização bidirecional em tempo real com o Supabase ──
   useEffect(() => {
     async function syncFromSupabase() {
       if (isSupabaseConfigured && supabase) {
         try {
           const { data, error } = await supabase.from('contratos').select('*');
+          const cloudTokens = new Set();
+
           if (!error && data && data.length > 0) {
+            data.forEach(r => { if (r.token) cloudTokens.add(r.token); });
             setContracts(prev => {
               const localMap = new Map(prev.map(c => [c.token || c.id, c]));
               for (const row of data) {
                 const key = row.token || row.id;
                 const existing = localMap.get(key) || {};
+                const isSigned = row.status === 'Assinado Digitalmente' || row.status === 'aceito';
                 localMap.set(key, {
                   ...existing,
                   id: row.id || existing.id,
@@ -62,12 +103,12 @@ export default function ContractsModule() {
                   remainingAmount: row.remaining_amount || existing.remainingAmount,
                   eventDate: row.event_date || existing.eventDate,
                   eventTime: row.event_time || existing.eventTime,
-                  signedStatus: row.status === 'Assinado Digitalmente' || row.status === 'aceito' ? 'Assinado Digitalmente' : (existing.signedStatus || row.status || 'Aguardando Assinatura'),
+                  signedStatus: isSigned ? 'Assinado Digitalmente' : (existing.signedStatus || row.status || 'Aguardando Assinatura'),
                   signedAt: row.assinado_em ? new Date(row.assinado_em).toLocaleString('pt-BR') : existing.signedAt,
                   revisaoSolicitada: Boolean(row.revisao_solicitada),
                   revisaoAt: row.revisao_at || existing.revisaoAt,
                   token: row.token || existing.token,
-                  statusColor: (row.status === 'Assinado Digitalmente' || row.status === 'aceito')
+                  statusColor: isSigned
                     ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
                     : (row.revisao_solicitada ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'),
                 });
@@ -77,6 +118,16 @@ export default function ContractsModule() {
               return merged;
             });
           }
+
+          // PUSH AUTOMÁTICO: se houver contratos locais que ainda não estão no Supabase, envia-os!
+          try {
+            const localStored = JSON.parse(localStorage.getItem('admin_contracts') || '[]');
+            for (const localCtr of localStored) {
+              if (localCtr.token && !cloudTokens.has(localCtr.token)) {
+                await upsertContractToSupabase(localCtr);
+              }
+            }
+          } catch (_) {}
         } catch (err) {
           console.warn('Erro ao sincronizar contratos do Supabase:', err);
         }
@@ -209,13 +260,8 @@ export default function ContractsModule() {
     setContracts(updated);
     try { localStorage.setItem('admin_contracts', JSON.stringify(updated)); } catch (_) {}
 
-    if (isSupabaseConfigured && supabase && target?.token) {
-      try {
-        await supabase.from('contratos').update({
-          revisao_solicitada: true,
-          revisao_at: today,
-        }).eq('token', target.token);
-      } catch (_) {}
+    if (target) {
+      await upsertContractToSupabase(target);
     }
 
     const ctrNum = target?.contractNumber || ctrId;
@@ -247,16 +293,8 @@ export default function ContractsModule() {
     try { localStorage.setItem('admin_contracts', JSON.stringify(updated)); } catch (_) {}
 
     // Sincroniza com Supabase
-    if (isSupabaseConfigured && supabase && acceptedCtr?.token) {
-      try {
-        await supabase.from('contratos').update({
-          status: 'Assinado Digitalmente',
-          assinado_em: nowIso,
-          revisao_solicitada: false,
-        }).eq('token', acceptedCtr.token);
-      } catch (err) {
-        console.warn('Erro ao atualizar aceite no Supabase:', err);
-      }
+    if (acceptedCtr) {
+      await upsertContractToSupabase(acceptedCtr);
     }
 
     // Despacha para a Agenda de Ensaios (última etapa da esteira após aceite do contrato!)
@@ -304,6 +342,57 @@ export default function ContractsModule() {
   // ── Mensagem de Confirmação & Agradecimento WhatsApp (Visual com Frase de Efeito) ──
   const buildWhatsAppThankYouMsg = (ctr) => {
     return `🎉 Parabéns, ${ctr.clientName}! Confirmamos o aceite do seu contrato ${ctr.contractNumber}!\n\nObrigado pela preferência e pela confiança na Agências Araújo! 📷✨\n"Eternizando momentos, contando histórias com arte, sensibilidade e excelência."\n\nSua produção já foi encaminhada para a nossa Agenda de Ensaios. Em breve nossa equipe entrará em contato para definir a data e horário ideal da sua sessão fotográfica!\n\nQualquer dúvida, estamos à disposição! 🥂✨\nAgências Araújo | (21) 97429-9780`;
+  };
+
+  // ── Envio Seguro do Contrato via WhatsApp com ativação na nuvem garantida ──
+  const handleSendContractWhatsApp = async (ctr) => {
+    let effectiveCtr = { ...ctr };
+    if (!effectiveCtr.token) {
+      effectiveCtr.token = `ctr_token_${Math.random().toString(36).substring(2, 10)}`;
+      setContracts(prev => {
+        const upd = prev.map(c => c.id === effectiveCtr.id ? effectiveCtr : c);
+        try { localStorage.setItem('admin_contracts', JSON.stringify(upd)); } catch (_) {}
+        return upd;
+      });
+    }
+
+    const targetPhone = resolveClientPhone(effectiveCtr.universalId, effectiveCtr.clientName, effectiveCtr.phone);
+    let cleanDigits = (targetPhone || '').replace(/\D/g, '');
+
+    if (!cleanDigits || cleanDigits.length < 10) {
+      const inputPhone = prompt(`Informe o WhatsApp de ${effectiveCtr.clientName} (com DDD, ex: 21990689864):`);
+      if (inputPhone && inputPhone.replace(/\D/g, '').length >= 10) {
+        cleanDigits = inputPhone.replace(/\D/g, '');
+        effectiveCtr.phone = inputPhone;
+      } else {
+        return;
+      }
+    }
+
+    showToast(`Ativando link público e enviando contrato de ${effectiveCtr.clientName}...`);
+    await upsertContractToSupabase(effectiveCtr);
+
+    const msg = buildWhatsAppMsg(effectiveCtr);
+    window.open(`https://wa.me/55${cleanDigits}?text=${encodeURIComponent(msg)}`, '_blank');
+    logActivity?.('ENVIO_WHATSAPP_CONTRATO', 'contratos', `Enviou link de contrato para ${effectiveCtr.clientName} (${cleanDigits})`);
+  };
+
+  // ── Envio de Agradecimento WhatsApp (Aceite confirmado) ──
+  const handleSendThankYouWhatsApp = (ctr) => {
+    const targetPhone = resolveClientPhone(ctr.universalId, ctr.clientName, ctr.phone);
+    let cleanDigits = (targetPhone || '').replace(/\D/g, '');
+
+    if (!cleanDigits || cleanDigits.length < 10) {
+      const inputPhone = prompt(`Informe o WhatsApp de ${ctr.clientName} (com DDD, ex: 21990689864):`);
+      if (inputPhone && inputPhone.replace(/\D/g, '').length >= 10) {
+        cleanDigits = inputPhone.replace(/\D/g, '');
+      } else {
+        return;
+      }
+    }
+
+    const msg = buildWhatsAppThankYouMsg(ctr);
+    window.open(`https://wa.me/55${cleanDigits}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
   const handleAddContract = (e) => {
@@ -356,7 +445,7 @@ export default function ContractsModule() {
       phone: resolvedPhone,
     };
 
-    setTimeout(() => {
+    setTimeout(async () => {
       const updatedContracts = editingCtrId
         ? contracts.map(c => c.id === editingCtrId ? created : c)
         : [created, ...contracts];
@@ -408,23 +497,7 @@ export default function ContractsModule() {
         }
 
         // Sincroniza contrato na nuvem (Supabase) para acesso público pelo token
-        if (isSupabaseConfigured && supabase) {
-          supabase.from('contratos').upsert({
-            token: created.token,
-            universal_id: created.universalId,
-            contract_number: created.contractNumber,
-            client_name: created.clientName,
-            client_cpf: created.clientCpf,
-            phone: created.phone,
-            service_title: created.serviceTitle,
-            total_amount: created.totalAmount,
-            deposit_amount: created.depositAmount,
-            remaining_amount: created.remainingAmount,
-            event_date: created.eventDate,
-            event_time: created.eventTime,
-            status: created.signedStatus,
-          }, { onConflict: 'token' }).catch(e => console.warn('Supabase contract upsert fallback:', e));
-        }
+        await upsertContractToSupabase(created);
       } catch (err) {
         console.error('Erro ao persistir contrato:', err);
       }
@@ -642,16 +715,14 @@ export default function ContractsModule() {
 
                   {/* Se JÁ assinou: Botão para Enviar Agradecimento Oficial no WhatsApp */}
                   {ctr.signedStatus === 'Assinado Digitalmente' && (
-                    <a
-                      href={`https://wa.me/55${(resolveClientPhone(ctr.universalId, ctr.clientName, ctr.phone) || '').replace(/\D/g, '')}?text=${encodeURIComponent(buildWhatsAppThankYouMsg(ctr))}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      onClick={() => handleSendThankYouWhatsApp(ctr)}
                       className="px-3 py-1.5 rounded-xl bg-gold/15 hover:bg-gold/25 border border-gold/40 text-gold-300 text-[10px] font-bold flex items-center gap-1.5 transition-colors shadow-sm"
                       title="Enviar agradecimento oficial e frase de efeito no WhatsApp do cliente"
                     >
                       <WhatsAppIcon className="w-3.5 h-3.5 text-gold-400" />
                       <span>Agradecimento WhatsApp</span>
-                    </a>
+                    </button>
                   )}
 
                   {/* Emitir / Editar Contrato individual */}
@@ -679,29 +750,15 @@ export default function ContractsModule() {
                     </button>
                   )}
 
-                  {/* WhatsApp — envia contrato completo + link digital com telefone correto */}
-                  <a
-                    href={`https://wa.me/55${(resolveClientPhone(ctr.universalId, ctr.clientName, ctr.phone) || '').replace(/\D/g, '')}?text=${encodeURIComponent(buildWhatsAppMsg(ctr))}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => {
-                      const targetPhone = resolveClientPhone(ctr.universalId, ctr.clientName, ctr.phone);
-                      const cleanDigits = (targetPhone || '').replace(/\D/g, '');
-                      if (!cleanDigits || cleanDigits.length < 10) {
-                        e.preventDefault();
-                        const inputPhone = prompt(`Informe o WhatsApp de ${ctr.clientName} (com DDD, ex: 21990689864):`);
-                        if (inputPhone && inputPhone.replace(/\D/g, '').length >= 10) {
-                          const digits = inputPhone.replace(/\D/g, '');
-                          window.open(`https://wa.me/55${digits}?text=${encodeURIComponent(buildWhatsAppMsg({ ...ctr, phone: inputPhone }))}`, '_blank');
-                        }
-                      }
-                    }}
+                  {/* WhatsApp — envia contrato completo + link digital com telefone correto e ativação em tempo real */}
+                  <button
+                    onClick={() => handleSendContractWhatsApp(ctr)}
                     className="px-3 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 transition-colors flex items-center gap-1.5 text-xs font-semibold"
                     title="Enviar contrato e link oficial de aceite via WhatsApp"
                   >
                     <WhatsAppIcon className="w-4 h-4 text-green-400" />
                     <span>Enviar Contrato</span>
-                  </a>
+                  </button>
                 </div>
               </div>
             </div>

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import WhatsAppIcon from '../../../components/icons/WhatsAppIcon';
 import { useAuth } from '../../../context/AuthContext';
+import { supabase, isSupabaseConfigured } from '../../../lib/supabaseClient';
 
 const SESSIONS_STORAGE_KEY = 'admin_sessions';
 
@@ -48,7 +49,10 @@ export default function ScheduleModule() {
       const payments = JSON.parse(localStorage.getItem('admin_payments') || '[]');
 
       // Helper: confirmação financeira (Sinal Quitado ou Quitado)
-      const isPaymentConfirmed = (uid, clientName) => {
+      const isPaymentConfirmed = (uid, clientName, ctr) => {
+        if (ctr && ctr.depositAmount && ctr.depositAmount !== 'R$ 0,00' && ctr.depositAmount !== 'R$ 0') {
+          return true;
+        }
         return payments.some(p => {
           const pUid = (p.universalId || '').trim().toLowerCase();
           const pClient = (p.clientName || '').trim().toLowerCase();
@@ -79,7 +83,7 @@ export default function ScheduleModule() {
         const uid = ctr.universalId || ctr.contractNumber;
         if (dismissed.includes(uid)) continue;
         if (scheduledUids.has(uid) || scheduledNames.has((ctr.clientName || '').toLowerCase().trim())) continue;
-        if (!isPaymentConfirmed(uid, ctr.clientName)) continue;
+        if (!isPaymentConfirmed(uid, ctr.clientName, ctr)) continue;
         if (seen.has(uid)) continue;
         seen.add(uid);
         list.push({
@@ -117,7 +121,7 @@ export default function ScheduleModule() {
 
         if (dismissed.includes(uid)) continue;
         if (scheduledUids.has(uid) || scheduledNames.has((p.clientName || '').toLowerCase().trim())) continue;
-        if (!isPaymentConfirmed(uid, p.clientName)) continue;
+        if (!isPaymentConfirmed(uid, p.clientName, matchingCtr)) continue;
         if (seen.has(uid)) continue;
         seen.add(uid);
         list.push({
@@ -154,12 +158,64 @@ export default function ScheduleModule() {
   };
 
   useEffect(() => {
+    async function syncFromSupabase() {
+      if (isSupabaseConfigured && supabase) {
+        try {
+          const { data, error } = await supabase.from('contratos').select('*');
+          if (!error && data && data.length > 0) {
+            const localContracts = JSON.parse(localStorage.getItem('admin_contracts') || '[]');
+            const localMap = new Map(localContracts.map(c => [c.token || c.id, c]));
+            let changed = false;
+
+            for (const row of data) {
+              const key = row.token || row.id;
+              const existing = localMap.get(key) || {};
+              const isSigned = row.status === 'Assinado Digitalmente' || row.status === 'aceito';
+              if (isSigned && existing.signedStatus !== 'Assinado Digitalmente') {
+                changed = true;
+              }
+              localMap.set(key, {
+                ...existing,
+                id: row.id || existing.id,
+                contractNumber: row.contract_number || existing.contractNumber,
+                universalId: row.universal_id || existing.universalId,
+                clientName: row.client_name || existing.clientName,
+                clientCpf: row.client_cpf || existing.clientCpf,
+                phone: row.phone || existing.phone,
+                serviceTitle: row.service_title || existing.serviceTitle,
+                totalAmount: row.total_amount || existing.totalAmount,
+                depositAmount: row.deposit_amount || existing.depositAmount,
+                remainingAmount: row.remaining_amount || existing.remainingAmount,
+                eventDate: row.event_date || existing.eventDate,
+                eventTime: row.event_time || existing.eventTime,
+                signedStatus: isSigned ? 'Assinado Digitalmente' : (existing.signedStatus || row.status || 'Aguardando Assinatura'),
+                signedAt: row.assinado_em ? new Date(row.assinado_em).toLocaleString('pt-BR') : existing.signedAt,
+                token: row.token || existing.token,
+              });
+            }
+
+            if (changed || localContracts.length === 0) {
+              const merged = Array.from(localMap.values());
+              try { localStorage.setItem('admin_contracts', JSON.stringify(merged)); } catch (_) {}
+              loadPendingReminders();
+            }
+          }
+        } catch (err) {
+          console.warn('Erro ao sincronizar contratos na agenda:', err);
+        }
+      }
+    }
+
+    syncFromSupabase();
     loadSessions();
     const handleStorage = () => {
       loadSessions();
     };
     window.addEventListener('storage', handleStorage);
-    const interval = setInterval(loadSessions, 6000);
+    const interval = setInterval(() => {
+      syncFromSupabase();
+      loadSessions();
+    }, 6000);
     return () => {
       window.removeEventListener('storage', handleStorage);
       clearInterval(interval);
