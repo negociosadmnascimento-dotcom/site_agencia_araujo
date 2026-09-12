@@ -163,11 +163,25 @@ export default function ScheduleModule() {
         try {
           const { data, error } = await supabase.from('contratos').select('*');
           if (!error && data && data.length > 0) {
-            const localContracts = JSON.parse(localStorage.getItem('admin_contracts') || '[]');
+            const dismissedContracts = JSON.parse(localStorage.getItem('admin_dismissed_contracts') || '[]');
+            const isDismissedCtr = (c) => {
+              if (!c) return false;
+              return (
+                (c.id && dismissedContracts.includes(c.id)) ||
+                (c.token && dismissedContracts.includes(c.token)) ||
+                (c.universalId && dismissedContracts.includes(c.universalId)) ||
+                (c.universal_id && dismissedContracts.includes(c.universal_id)) ||
+                (c.contractNumber && dismissedContracts.includes(c.contractNumber)) ||
+                (c.contract_number && dismissedContracts.includes(c.contract_number))
+              );
+            };
+
+            const localContracts = JSON.parse(localStorage.getItem('admin_contracts') || '[]').filter(c => !isDismissedCtr(c));
             const localMap = new Map(localContracts.map(c => [c.token || c.id, c]));
             let changed = false;
 
             for (const row of data) {
+              if (isDismissedCtr(row)) continue;
               const key = row.token || row.id;
               const existing = localMap.get(key) || {};
               const isSigned = row.status === 'Assinado Digitalmente' || row.status === 'aceito';
@@ -195,7 +209,7 @@ export default function ScheduleModule() {
             }
 
             if (changed || localContracts.length === 0) {
-              const merged = Array.from(localMap.values());
+              const merged = Array.from(localMap.values()).filter(c => !isDismissedCtr(c));
               try { localStorage.setItem('admin_contracts', JSON.stringify(merged)); } catch (_) {}
               loadPendingReminders();
             }

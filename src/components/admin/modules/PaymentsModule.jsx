@@ -117,17 +117,27 @@ export default function PaymentsModule() {
       if (existingIdx >= 0) {
         // Atualiza contrato existente sem duplicar
         const existing = contracts[existingIdx];
+        const valuesChanged = (pay.amount && pay.amount !== existing.totalAmount) ||
+                              (pay.depositAmount && pay.depositAmount !== existing.depositAmount);
         const updated = {
           ...existing,
           universalId: existing.universalId || targetUid,
           phone: resolvedPhone || existing.phone,
+          serviceTitle: pay.description || existing.serviceTitle,
           depositAmount: pay.depositAmount && pay.depositAmount !== 'R$ 0,00' ? pay.depositAmount : existing.depositAmount,
           remainingAmount: pay.remainingAmount || existing.remainingAmount,
           totalAmount: pay.amount || existing.totalAmount,
+          eventDate: pay.dueDate && pay.dueDate !== 'A definir' ? pay.dueDate : existing.eventDate,
           token: existing.token || `ctr_token_${Math.random().toString(36).substring(2, 10)}`,
+          signedStatus: valuesChanged ? 'Aguardando Assinatura' : existing.signedStatus,
+          signedAt: valuesChanged ? null : existing.signedAt,
+          statusColor: (valuesChanged ? false : (existing.signedStatus === 'Assinado Digitalmente'))
+            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+            : 'bg-amber-500/20 text-amber-300 border-amber-500/30',
         };
         contracts[existingIdx] = updated;
         localStorage.setItem('admin_contracts', JSON.stringify(contracts));
+        window.dispatchEvent(new Event('storage'));
 
         // Sincroniza contrato atualizado no Supabase para acesso público do link
         if (isSupabaseConfigured && supabase && updated.token) {
@@ -145,6 +155,7 @@ export default function PaymentsModule() {
               remaining_amount: updated.remainingAmount,
               event_date: updated.eventDate || 'A definir',
               status: updated.signedStatus || 'Aguardando Assinatura',
+              assinado_em: updated.signedAt || null,
             }, { onConflict: 'token' }).catch(e => console.warn('Supabase auto-contract update error:', e));
           } catch (_) {}
         }

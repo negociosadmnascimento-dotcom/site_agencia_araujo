@@ -83,7 +83,7 @@ export const resolveClientPhone = (universalId, clientName, currentPhone) => {
  */
 export const sanitizePipelineData = () => {
   try {
-    const SANITIZE_VERSION = 'v3_status_pendente_sinal_recebido_total_quitado';
+    const SANITIZE_VERSION = 'v5_sync_payments_to_contracts_remover_fila';
     const lastRun = localStorage.getItem('admin_sanitize_pipeline_version');
 
     let paymentsChanged = false;
@@ -125,14 +125,17 @@ export const sanitizePipelineData = () => {
           uniquePayments.push({
             ...p,
             id: p.id || 'pay_willian_canonical',
-            invoice: 'FAT-2026-819',
-            universalId: 'CLI-2026-959-WILLIA',
-            clientName: 'WILLIAN DE ARAUJO NASCIMENTO',
-            phone: '(21) 99068-9864',
-            description: 'Ensaio Retrato Corporativo',
-            status: 'Sinal Recebido',
-            depositAmount: p.depositAmount && p.depositAmount !== 'R$ 0,00' ? p.depositAmount : 'R$ 1,00',
-            statusColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+            invoice: p.invoice || 'FAT-2026-940',
+            universalId: p.universalId || 'CLI-2026-959-WILLIA',
+            clientName: p.clientName || 'WILLIAN DE ARAUJO NASCIMENTO',
+            phone: p.phone || '(21) 99068-9864',
+            description: p.description || 'Ensaio Retrato Corporativo',
+            status: p.status || 'Sinal Recebido',
+            amount: p.amount || 'R$ 10,00',
+            depositAmount: p.depositAmount && p.depositAmount !== 'R$ 0,00' ? p.depositAmount : 'R$ 5,00',
+            remainingAmount: p.remainingAmount || 'R$ 5,00',
+            dueDate: p.dueDate || '19/09/2026',
+            statusColor: p.statusColor || 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
           });
           seenUids.add('CLI-2026-959-WILLIA');
           paymentsChanged = true;
@@ -159,16 +162,28 @@ export const sanitizePipelineData = () => {
 
     // --- 2. SANEAMENTO DE CONTRATOS ---
     const contracts = JSON.parse(localStorage.getItem('admin_contracts') || '[]');
+    const dismissedContracts = JSON.parse(localStorage.getItem('admin_dismissed_contracts') || '[]');
+
     if (contracts.length > 0) {
       const uniqueContracts = [];
       const seenCtrUids = new Set();
       const seenCtrNames = new Set();
 
       for (const ctr of contracts) {
-        const isWillian = (ctr.clientName || '').toLowerCase().includes('willian') || 
-                          (ctr.universalId || '').includes('WILLIA') ||
-                          ctr.contractNumber === 'CTR-2026-690' ||
-                          ctr.contractNumber === 'CTR-2026-743';
+        const isDismissed = dismissedContracts.includes(ctr.token) ||
+                            dismissedContracts.includes(ctr.contractNumber) ||
+                            dismissedContracts.includes(ctr.universalId) ||
+                            dismissedContracts.includes(ctr.id);
+        if (isDismissed) {
+          contractsChanged = true;
+          continue;
+        }
+
+        const willianPay = uniquePayments.find(p => (p.clientName || '').toLowerCase().includes('willian') || (p.universalId || '').includes('WILLIA'));
+        const payTotal = willianPay?.amount || 'R$ 10,00';
+        const payDeposit = willianPay?.depositAmount || 'R$ 5,00';
+        const payRemaining = willianPay?.remainingAmount || 'R$ 5,00';
+        const payDate = willianPay?.dueDate || '19/09/2026';
 
         if (isWillian) {
           if (seenCtrNames.has('willian')) {
@@ -176,27 +191,76 @@ export const sanitizePipelineData = () => {
             continue; // descarta duplicata CTR-2026-690
           }
           seenCtrNames.add('willian');
-          const isAlreadySigned = ctr.signedStatus === 'Assinado Digitalmente' || ctr.signedStatus === 'aceito';
+          
+          // Se os valores herdados do pagamento forem os novos e o contrato anterior tinha valores antigos,
+          // força 'Aguardando Assinatura' para que o cliente assine os novos termos
+          const valuesChanged = (ctr.totalAmount && ctr.totalAmount !== payTotal) || (ctr.depositAmount && ctr.depositAmount !== payDeposit);
+          const finalSignedStatus = (!valuesChanged && (ctr.signedStatus === 'Assinado Digitalmente' || ctr.signedStatus === 'aceito'))
+            ? 'Assinado Digitalmente'
+            : 'Aguardando Assinatura';
+          const finalSignedAt = finalSignedStatus === 'Assinado Digitalmente' ? ctr.signedAt : null;
+
           uniqueContracts.push({
             ...ctr,
             id: ctr.id || 'ctr_willian_canonical',
-            contractNumber: 'CTR-2026-743',
-            universalId: 'CLI-2026-959-WILLIA',
-            clientName: 'WILLIAN DE ARAUJO NASCIMENTO',
+            contractNumber: ctr.contractNumber || 'CTR-2026-743',
+            universalId: ctr.universalId || 'CLI-2026-959-WILLIA',
+            clientName: ctr.clientName || 'WILLIAN DE ARAUJO NASCIMENTO',
             clientCpf: ctr.clientCpf && ctr.clientCpf !== '0000000000' ? ctr.clientCpf : 'Sob consulta',
-            phone: '(21) 99068-9864',
-            serviceTitle: 'Ensaio Retrato Corporativo',
-            signedStatus: isAlreadySigned ? 'Assinado Digitalmente' : (ctr.signedStatus || 'Aguardando Assinatura'),
-            signedAt: isAlreadySigned ? ctr.signedAt : null,
-            revisaoSolicitada: isAlreadySigned ? false : Boolean(ctr.revisaoSolicitada),
+            phone: ctr.phone || '(21) 99068-9864',
+            serviceTitle: ctr.serviceTitle || 'Ensaio Retrato Corporativo',
+            totalAmount: payTotal,
+            depositAmount: payDeposit,
+            remainingAmount: payRemaining,
+            eventDate: payDate,
+            signedStatus: finalSignedStatus,
+            signedAt: finalSignedAt,
+            revisaoSolicitada: false,
             token: ctr.token || 'ctr_token_61im7hw6',
-            statusColor: isAlreadySigned
+            statusColor: finalSignedStatus === 'Assinado Digitalmente'
               ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
               : 'bg-amber-500/20 text-amber-300 border-amber-500/30',
           });
           seenCtrUids.add('CLI-2026-959-WILLIA');
           contractsChanged = true;
           continue;
+        }
+
+        // Sincronização automática para qualquer outro contrato com sua etapa anterior (Pagamentos)
+        const matchPayment = uniquePayments.find(p => {
+          const pUid = (p.universalId || '').trim().toLowerCase();
+          const pClient = (p.clientName || '').trim().toLowerCase();
+          const cUid = (ctr.universalId || '').trim().toLowerCase();
+          const cNum = (ctr.contractNumber || '').trim().toLowerCase();
+          const cClient = (ctr.clientName || '').trim().toLowerCase();
+          return (
+            (cUid && pUid === cUid) ||
+            (cNum && (pUid === cNum || (p.invoice && p.invoice.toLowerCase().includes(cNum.replace('ctr-', ''))))) ||
+            (cClient && pClient && (cClient === pClient || cClient.includes(pClient) || pClient.includes(cClient)))
+          );
+        });
+
+        if (matchPayment && matchPayment.amount) {
+          const pTotal = matchPayment.amount.startsWith('R$') ? matchPayment.amount : `R$ ${matchPayment.amount}`;
+          const pDeposit = matchPayment.depositAmount && matchPayment.depositAmount !== 'R$ 0,00'
+            ? (matchPayment.depositAmount.startsWith('R$') ? matchPayment.depositAmount : `R$ ${matchPayment.depositAmount}`)
+            : ctr.depositAmount;
+          const pRemaining = matchPayment.remainingAmount && matchPayment.remainingAmount !== 'R$ 0,00'
+            ? (matchPayment.remainingAmount.startsWith('R$') ? matchPayment.remainingAmount : `R$ ${matchPayment.remainingAmount}`)
+            : ctr.remainingAmount;
+          const pDate = matchPayment.dueDate && matchPayment.dueDate !== 'A definir' ? matchPayment.dueDate : ctr.eventDate;
+
+          const diffValues = (ctr.totalAmount && ctr.totalAmount !== pTotal) || (pDeposit && ctr.depositAmount !== pDeposit);
+          if (diffValues) {
+            ctr.totalAmount = pTotal;
+            ctr.depositAmount = pDeposit;
+            ctr.remainingAmount = pRemaining;
+            ctr.eventDate = pDate;
+            ctr.signedStatus = 'Aguardando Assinatura';
+            ctr.signedAt = null;
+            ctr.statusColor = 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+            contractsChanged = true;
+          }
         }
 
         const uid = ctr.universalId || ctr.contractNumber;

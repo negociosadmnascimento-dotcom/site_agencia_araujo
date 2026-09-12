@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   FileCheck, Plus, Search, Check, 
   ShieldCheck, X, RefreshCw, AlertTriangle, Clock, CheckCircle2,
-  Eye, EyeOff
+  Eye, EyeOff, Trash2
 } from 'lucide-react';
 import WhatsAppIcon from '../../../components/icons/WhatsAppIcon';
 import { useAuth } from '../../../context/AuthContext';
@@ -27,10 +27,45 @@ export default function ContractsModule() {
     setTimeout(() => setToast(null), 3500);
   };
 
+  // ── Helper: Verifica se o contrato foi explicitamente descartado da fila pelo Tenant ──
+  const isContractDismissed = (item) => {
+    if (!item) return false;
+    try {
+      const dismissed = JSON.parse(localStorage.getItem('admin_dismissed_contracts') || '[]');
+      return (
+        (item.id && dismissed.includes(item.id)) ||
+        (item.token && dismissed.includes(item.token)) ||
+        (item.universal_id && dismissed.includes(item.universal_id)) ||
+        (item.universalId && dismissed.includes(item.universalId)) ||
+        (item.contract_number && dismissed.includes(item.contract_number)) ||
+        (item.contractNumber && dismissed.includes(item.contractNumber))
+      );
+    } catch {
+      return false;
+    }
+  };
+
+  // ── Pipeline Integrity: Carrega faturas da etapa anterior (Pagamentos) ──
+  const getPayments = () => {
+    try {
+      return JSON.parse(localStorage.getItem('admin_payments') || '[]');
+    } catch {
+      return [];
+    }
+  };
+
   const [contracts, setContracts] = useState(() => {
     try {
       const stored = localStorage.getItem('admin_contracts');
-      return stored ? JSON.parse(stored) : [];
+      const dismissed = JSON.parse(localStorage.getItem('admin_dismissed_contracts') || '[]');
+      if (!stored) return [];
+      const list = JSON.parse(stored);
+      return list.filter(c => 
+        !dismissed.includes(c.id) &&
+        !dismissed.includes(c.token) &&
+        !dismissed.includes(c.universalId) &&
+        !dismissed.includes(c.contractNumber)
+      );
     } catch {
       return [];
     }
@@ -73,23 +108,63 @@ export default function ContractsModule() {
     }
   };
 
-  // ── Sincronização bidirecional em tempo real com o Supabase ──
+  // ── Sincronização bidirecional em tempo real com o Supabase e Esteira Anterior (Pagamentos) ──
   useEffect(() => {
     async function syncFromSupabase() {
       if (isSupabaseConfigured && supabase) {
         try {
           const { data, error } = await supabase.from('contratos').select('*');
           const cloudTokens = new Set();
+          const payments = getPayments();
 
           if (!error && data && data.length > 0) {
-            data.forEach(r => { if (r.token) cloudTokens.add(r.token); });
+            const activeCloudRows = data.filter(r => !isContractDismissed(r));
+            activeCloudRows.forEach(r => { if (r.token) cloudTokens.add(r.token); });
+
             setContracts(prev => {
-              const localMap = new Map(prev.map(c => [c.token || c.id, c]));
-              for (const row of data) {
+              const localMap = new Map(prev.filter(c => !isContractDismissed(c)).map(c => [c.token || c.id, c]));
+
+              for (const row of activeCloudRows) {
                 const key = row.token || row.id;
                 const existing = localMap.get(key) || {};
                 const isSigned = row.status === 'Assinado Digitalmente' || row.status === 'aceito';
-                localMap.set(key, {
+
+                // Cruzamento estrito com a etapa anterior (Pagamentos)
+                const uid = row.universal_id || existing.universalId || row.contract_number || existing.contractNumber;
+                const client = row.client_name || existing.clientName;
+                const matchingPay = payments.find(p => {
+                  const pUid = (p.universalId || '').trim().toLowerCase();
+                  const pClient = (p.clientName || '').trim().toLowerCase();
+                  const targetUid = (uid || '').trim().toLowerCase();
+                  const targetClient = (client || '').trim().toLowerCase();
+                  return (
+                    (targetUid && (pUid === targetUid || (p.invoice && p.invoice.toLowerCase().includes(targetUid)))) ||
+                    (targetClient && pClient && (pClient === targetClient || pClient.includes(targetClient) || targetClient.includes(pClient)))
+                  );
+                });
+
+                const payTotal = matchingPay?.amount;
+                const payDeposit = matchingPay?.depositAmount && matchingPay.depositAmount !== 'R$ 0,00' ? matchingPay.depositAmount : null;
+                const payRemaining = matchingPay?.remainingAmount && matchingPay.remainingAmount !== 'R$ 0,00' ? matchingPay.remainingAmount : null;
+                const payDate = matchingPay?.dueDate && matchingPay.dueDate !== 'A definir' ? matchingPay.dueDate : null;
+
+                const effectiveTotal = payTotal || row.total_amount || existing.totalAmount;
+                const effectiveDeposit = payDeposit || row.deposit_amount || existing.depositAmount;
+                const effectiveRemaining = payRemaining || row.remaining_amount || existing.remainingAmount;
+                const effectiveDate = payDate || row.event_date || existing.eventDate;
+
+                // Se valores financeiros foram alterados na esteira anterior (Pagamentos), contrato deve ser re-assinado
+                const valuesDiffer = (payTotal && (row.total_amount !== payTotal || existing.totalAmount !== payTotal)) ||
+                                     (payDeposit && (row.deposit_amount !== payDeposit || existing.depositAmount !== payDeposit));
+
+                const finalStatus = valuesDiffer
+                  ? 'Aguardando Assinatura'
+                  : (isSigned ? 'Assinado Digitalmente' : (existing.signedStatus || row.status || 'Aguardando Assinatura'));
+                const finalSignedAt = finalStatus === 'Assinado Digitalmente'
+                  ? (row.assinado_em ? new Date(row.assinado_em).toLocaleString('pt-BR') : existing.signedAt)
+                  : null;
+
+                const updatedCtr = {
                   ...existing,
                   id: row.id || existing.id,
                   contractNumber: row.contract_number || existing.contractNumber,
@@ -98,30 +173,38 @@ export default function ContractsModule() {
                   clientCpf: row.client_cpf || existing.clientCpf,
                   phone: row.phone || existing.phone,
                   serviceTitle: row.service_title || existing.serviceTitle,
-                  totalAmount: row.total_amount || existing.totalAmount,
-                  depositAmount: row.deposit_amount || existing.depositAmount,
-                  remainingAmount: row.remaining_amount || existing.remainingAmount,
-                  eventDate: row.event_date || existing.eventDate,
+                  totalAmount: effectiveTotal,
+                  depositAmount: effectiveDeposit,
+                  remainingAmount: effectiveRemaining,
+                  eventDate: effectiveDate,
                   eventTime: row.event_time || existing.eventTime,
-                  signedStatus: isSigned ? 'Assinado Digitalmente' : (existing.signedStatus || row.status || 'Aguardando Assinatura'),
-                  signedAt: row.assinado_em ? new Date(row.assinado_em).toLocaleString('pt-BR') : existing.signedAt,
-                  revisaoSolicitada: Boolean(row.revisao_solicitada),
+                  signedStatus: finalStatus,
+                  signedAt: finalSignedAt,
+                  revisaoSolicitada: finalStatus === 'Assinado Digitalmente' ? false : Boolean(row.revisao_solicitada),
                   revisaoAt: row.revisao_at || existing.revisaoAt,
                   token: row.token || existing.token,
-                  statusColor: isSigned
+                  statusColor: finalStatus === 'Assinado Digitalmente'
                     ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
                     : (row.revisao_solicitada ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'),
-                });
+                };
+
+                localMap.set(key, updatedCtr);
+
+                // Se valores mudaram em relação à nuvem, atualiza Supabase
+                if (valuesDiffer) {
+                  upsertContractToSupabase(updatedCtr);
+                }
               }
-              const merged = Array.from(localMap.values());
+
+              const merged = Array.from(localMap.values()).filter(c => !isContractDismissed(c));
               try { localStorage.setItem('admin_contracts', JSON.stringify(merged)); } catch (_) {}
               return merged;
             });
           }
 
-          // PUSH AUTOMÁTICO: se houver contratos locais que ainda não estão no Supabase, envia-os!
+          // PUSH AUTOMÁTICO: se houver contratos locais válidos que ainda não estão no Supabase, envia-os!
           try {
-            const localStored = JSON.parse(localStorage.getItem('admin_contracts') || '[]');
+            const localStored = JSON.parse(localStorage.getItem('admin_contracts') || '[]').filter(c => !isContractDismissed(c));
             for (const localCtr of localStored) {
               if (localCtr.token && !cloudTokens.has(localCtr.token)) {
                 await upsertContractToSupabase(localCtr);
@@ -135,8 +218,13 @@ export default function ContractsModule() {
     }
 
     syncFromSupabase();
-    const interval = setInterval(syncFromSupabase, 8000);
-    return () => clearInterval(interval);
+    const handleStorage = () => { syncFromSupabase(); };
+    window.addEventListener('storage', handleStorage);
+    const interval = setInterval(syncFromSupabase, 6000);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      clearInterval(interval);
+    };
   }, []);
 
   const emptyNewCtr = {
@@ -152,14 +240,6 @@ export default function ContractsModule() {
 
   const [newCtr, setNewCtr] = useState(emptyNewCtr);
 
-  // ── Pipeline Integrity: load payments to cross-reference ──
-  const getPayments = () => {
-    try {
-      return JSON.parse(localStorage.getItem('admin_payments') || '[]');
-    } catch {
-      return [];
-    }
-  };
 
   // ── Pipeline Integrity: Verifica se há pagamento confirmado (Sinal ou Quitado) ──
   const isPaymentConfirmed = (ctr) => {
@@ -393,6 +473,67 @@ export default function ContractsModule() {
 
     const msg = buildWhatsAppThankYouMsg(ctr);
     window.open(`https://wa.me/55${cleanDigits}?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+
+  // ── Remover Contrato da Fila permanentemente ──
+  const handleRemoveContract = async (ctrId) => {
+    const target = contracts.find((c) => c.id === ctrId);
+    if (!target) return;
+
+    const ctrLabel = target.contractNumber
+      ? `${target.contractNumber} (${target.clientName})`
+      : target.clientName;
+
+    if (!window.confirm(`Deseja remover o contrato ${ctrLabel} da fila de contratos?`)) {
+      return;
+    }
+
+    // 1. Remove do state local
+    const updated = contracts.filter((c) => c.id !== ctrId && c.token !== target.token && c.contractNumber !== target.contractNumber);
+    setContracts(updated);
+    try {
+      localStorage.setItem('admin_contracts', JSON.stringify(updated));
+    } catch (_) {}
+
+    // 2. Registra nos descartados para não reaparecer no polling do Supabase
+    try {
+      const dismissed = JSON.parse(localStorage.getItem('admin_dismissed_contracts') || '[]');
+      const keysToAdd = [target.id, target.token, target.universalId, target.contractNumber].filter(Boolean);
+      keysToAdd.forEach((k) => {
+        if (!dismissed.includes(k)) dismissed.push(k);
+      });
+      localStorage.setItem('admin_dismissed_contracts', JSON.stringify(dismissed));
+    } catch (_) {}
+
+    // 3. Remove da fila de agendamento na agenda (admin_pending_schedules)
+    try {
+      const pendingList = JSON.parse(localStorage.getItem('admin_pending_schedules') || '[]');
+      const uid = target.universalId || target.contractNumber;
+      const filteredPending = pendingList.filter(item => 
+        (item.universalId || item.id) !== uid &&
+        item.contractNumber !== target.contractNumber &&
+        item.clientName !== target.clientName
+      );
+      localStorage.setItem('admin_pending_schedules', JSON.stringify(filteredPending));
+    } catch (_) {}
+
+    // 4. Deleta do Supabase
+    if (isSupabaseConfigured && supabase) {
+      try {
+        if (target.token) {
+          await supabase.from('contratos').delete().eq('token', target.token);
+        }
+        if (target.contractNumber) {
+          await supabase.from('contratos').delete().eq('contract_number', target.contractNumber);
+        }
+      } catch (err) {
+        console.warn('Erro ao remover contrato do Supabase:', err);
+      }
+    }
+
+    logActivity?.('EXCLUSAO_CONTRATO', 'contratos', `Removeu contrato ${ctrLabel} da fila`);
+    window.dispatchEvent(new Event('storage'));
+    showToast(`Contrato ${target.contractNumber || ''} removido da fila com sucesso.`);
   };
 
   const handleAddContract = (e) => {
@@ -758,6 +899,16 @@ export default function ContractsModule() {
                   >
                     <WhatsAppIcon className="w-4 h-4 text-green-400" />
                     <span>Enviar Contrato</span>
+                  </button>
+
+                  {/* Remover da Fila */}
+                  <button
+                    onClick={() => handleRemoveContract(ctr.id)}
+                    className="px-2.5 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                    title="Remover contrato da fila"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                    <span>Remover da Fila</span>
                   </button>
                 </div>
               </div>
