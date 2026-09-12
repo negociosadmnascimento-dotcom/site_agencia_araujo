@@ -4,6 +4,7 @@ import {
   Clock, AlertCircle, Eye, EyeOff, Lock, ArrowUpRight, Download, X, RefreshCw, Trash2
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
+import { supabase, isSupabaseConfigured } from '../../../lib/supabaseClient';
 
 export default function PaymentsModule() {
   const { isSuperAdmin, logActivity } = useAuth();
@@ -121,47 +122,29 @@ export default function PaymentsModule() {
         };
         contracts.unshift(newContract);
         localStorage.setItem('admin_contracts', JSON.stringify(contracts));
-        logActivity?.('AUTO_CONTRATO', 'contratos', `Contrato ${ctrNum} emitido automaticamente após confirmação financeira [${newContract.universalId}]`);
 
-        // ── Última Etapa da Esteira: Dispara lembrete para a Agenda de Ensaios ──
-        try {
-          const pendingList = JSON.parse(localStorage.getItem('admin_pending_schedules') || '[]');
-          if (!pendingList.some(item => item.universalId === newContract.universalId)) {
-            pendingList.unshift({
-              id: `sched_rem_${Date.now()}`,
-              universalId: newContract.universalId,
-              clientName: newContract.clientName,
+        // Sincroniza contrato com o Supabase para validação pública no link
+        if (isSupabaseConfigured && supabase) {
+          try {
+            supabase.from('contratos').upsert({
+              token: newContract.token,
+              universal_id: newContract.universalId,
+              contract_number: newContract.contractNumber,
+              client_name: newContract.clientName,
+              client_cpf: newContract.clientCpf,
               phone: newContract.phone,
-              service: newContract.serviceTitle,
-              depositAmount: newContract.depositAmount,
-              contractNumber: newContract.contractNumber,
-              createdAt: new Date().toISOString(),
-            });
-            localStorage.setItem('admin_pending_schedules', JSON.stringify(pendingList));
-            window.dispatchEvent(new Event('storage'));
-          }
-        } catch (_) {}
+              service_title: newContract.serviceTitle,
+              total_amount: newContract.totalAmount,
+              deposit_amount: newContract.depositAmount,
+              remaining_amount: newContract.remainingAmount,
+              event_date: newContract.eventDate,
+              status: newContract.signedStatus,
+            }, { onConflict: 'token' }).catch(() => {});
+          } catch (_) {}
+        }
 
+        logActivity?.('AUTO_CONTRATO', 'contratos', `Contrato ${ctrNum} emitido automaticamente após confirmação financeira [${newContract.universalId}]`);
         return newContract;
-      } else {
-        // Se o contrato já existia, garante que o lembrete de agendamento esteja ativo
-        try {
-          const pendingList = JSON.parse(localStorage.getItem('admin_pending_schedules') || '[]');
-          if (!pendingList.some(item => item.universalId === targetUid)) {
-            pendingList.unshift({
-              id: `sched_rem_${Date.now()}`,
-              universalId: targetUid,
-              clientName: pay.clientName,
-              phone: pay.phone,
-              service: pay.description || 'Ensaio Fotográfico',
-              depositAmount: pay.depositAmount || 'R$ 0,00',
-              contractNumber: contracts.find(c => c.universalId === targetUid)?.contractNumber || 'Contrato Ativo',
-              createdAt: new Date().toISOString(),
-            });
-            localStorage.setItem('admin_pending_schedules', JSON.stringify(pendingList));
-            window.dispatchEvent(new Event('storage'));
-          }
-        } catch (_) {}
       }
     } catch (err) {
       console.error('Erro ao gerar contrato automático:', err);

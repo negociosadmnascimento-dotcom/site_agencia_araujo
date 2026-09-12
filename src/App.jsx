@@ -16,6 +16,7 @@ import Footer from './components/Footer';
 import LoginView from './components/admin/LoginView';
 import AdminLayout from './components/admin/AdminLayout';
 import SuperAdminLayout from './components/superadmin/SuperAdminLayout';
+import ContractAcceptanceView from './components/ContractAcceptanceView';
 import { useAuth } from './context/AuthContext';
 
 export default function App() {
@@ -42,7 +43,12 @@ export default function App() {
       return 'admin';
     }
 
-    // 4. Default: 100% Public Site (no admin buttons or traces)
+    // 4. Digital Contract Acceptance View (Client Token)
+    if (path.startsWith('/contrato') || hash.startsWith('#contrato')) {
+      return 'contrato';
+    }
+
+    // 5. Default: 100% Public Site (no admin buttons or traces)
     return 'site';
   };
 
@@ -179,7 +185,12 @@ export default function App() {
     return <AdminLayout onBackToSite={() => navigateTo('site')} />;
   }
 
-  // 3. RENDER 100% PUBLIC SITE (COMPLETELY CLEAN - ZERO ADMIN BUTTONS/BADGES)
+  // 3. RENDER DIGITAL CONTRACT ACCEPTANCE VIEW (LINK: /contrato/:token)
+  if (currentView === 'contrato') {
+    return <ContractAcceptanceView onBackToSite={() => navigateTo('site')} />;
+  }
+
+  // 4. RENDER 100% PUBLIC SITE (COMPLETELY CLEAN - ZERO ADMIN BUTTONS/BADGES)
   return (
     <div className="min-h-screen bg-[#FAF9F6] dark:bg-dark-950 text-slate-900 dark:text-slate-100 flex flex-col selection:bg-gold-500 selection:text-black transition-colors duration-300">
       {/* Header Navigation */}

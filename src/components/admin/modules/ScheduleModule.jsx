@@ -38,13 +38,30 @@ export default function ScheduleModule() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // Carrega lembretes de clientes que concluíram a esteira e aguardam agendamento
+  // Carrega lembretes de clientes que concluíram estritamente a esteira e aguardam agendamento
   const loadPendingReminders = () => {
     try {
       const storedSessions = JSON.parse(localStorage.getItem(SESSIONS_STORAGE_KEY) || '[]');
       const contracts = JSON.parse(localStorage.getItem('admin_contracts') || '[]');
       const explicitPending = JSON.parse(localStorage.getItem('admin_pending_schedules') || '[]');
       const dismissed = JSON.parse(localStorage.getItem('admin_dismissed_schedule_reminders') || '[]');
+      const payments = JSON.parse(localStorage.getItem('admin_payments') || '[]');
+
+      // Helper: confirmação financeira (Sinal Quitado ou Quitado)
+      const isPaymentConfirmed = (uid, clientName) => {
+        return payments.some(p => {
+          const pUid = (p.universalId || '').trim().toLowerCase();
+          const pClient = (p.clientName || '').trim().toLowerCase();
+          const targetUid = (uid || '').trim().toLowerCase();
+          const targetClient = (clientName || '').trim().toLowerCase();
+          const matchUid = targetUid && (pUid === targetUid || p.invoice?.toLowerCase().includes(targetUid));
+          const matchClient = targetClient && (pClient === targetClient || pClient.includes(targetClient));
+          if (matchUid || matchClient) {
+            return p.status === 'Sinal Quitado' || p.status === 'Quitado';
+          }
+          return false;
+        });
+      };
 
       const scheduledUids = new Set(storedSessions.map(s => s.universalId).filter(Boolean));
       const scheduledNames = new Set(storedSessions.map(s => (s.client || '').toLowerCase().trim()));
@@ -52,25 +69,17 @@ export default function ScheduleModule() {
       const list = [];
       const seen = new Set();
 
-      for (const p of explicitPending) {
-        if (!p || !p.clientName) continue;
-        const uid = p.universalId || p.id;
-        if (dismissed.includes(uid)) continue;
-        if (scheduledUids.has(uid) || scheduledNames.has((p.clientName || '').toLowerCase().trim())) continue;
-        if (seen.has(uid)) continue;
-        seen.add(uid);
-        list.push({
-          ...p,
-          uid,
-          sourceType: 'pipeline',
-        });
-      }
-
+      // 1. Clientes com contratos aceitos/assinados e pagamento confirmado
       for (const ctr of contracts) {
         if (!ctr || !ctr.clientName) continue;
+        // REGRA ESTRITA DA ESTEIRA: Somente clientes com contrato ACEITO/ASSINADO avançam para agendamento!
+        const isAccepted = ctr.signedStatus === 'Assinado Digitalmente' || ctr.signedStatus === 'Contrato Aceito';
+        if (!isAccepted) continue;
+
         const uid = ctr.universalId || ctr.contractNumber;
         if (dismissed.includes(uid)) continue;
         if (scheduledUids.has(uid) || scheduledNames.has((ctr.clientName || '').toLowerCase().trim())) continue;
+        if (!isPaymentConfirmed(uid, ctr.clientName)) continue;
         if (seen.has(uid)) continue;
         seen.add(uid);
         list.push({
@@ -85,6 +94,22 @@ export default function ScheduleModule() {
           contractNumber: ctr.contractNumber,
           token: ctr.token,
           sourceType: 'contract',
+        });
+      }
+
+      // 2. Fila explícita despachada pós-aceite de contrato (garantindo esteira prévia)
+      for (const p of explicitPending) {
+        if (!p || !p.clientName) continue;
+        const uid = p.universalId || p.id;
+        if (dismissed.includes(uid)) continue;
+        if (scheduledUids.has(uid) || scheduledNames.has((p.clientName || '').toLowerCase().trim())) continue;
+        if (!isPaymentConfirmed(uid, p.clientName)) continue;
+        if (seen.has(uid)) continue;
+        seen.add(uid);
+        list.push({
+          ...p,
+          uid,
+          sourceType: 'pipeline',
         });
       }
 
@@ -112,7 +137,7 @@ export default function ScheduleModule() {
 
   useEffect(() => {
     loadSessions();
-    const handleStorage = (e) => {
+    const handleStorage = () => {
       loadSessions();
     };
     window.addEventListener('storage', handleStorage);
@@ -148,17 +173,28 @@ export default function ScheduleModule() {
     setShowAddModal(true);
   };
 
-  const handleDismissReminder = (uid) => {
+  // ── Remover cliente da fila de agendamento permanentemente ──
+  const handleRemoveFromQueue = (rem) => {
+    const uid = rem.universalId || rem.uid || rem.id;
     try {
+      // 1. Remove da lista de pendências explícitas
+      const explicitPending = JSON.parse(localStorage.getItem('admin_pending_schedules') || '[]');
+      const updatedPending = explicitPending.filter(item => (item.universalId || item.uid || item.id) !== uid);
+      localStorage.setItem('admin_pending_schedules', JSON.stringify(updatedPending));
+
+      // 2. Registra na lista de descartados para não reaparecer
       const dismissed = JSON.parse(localStorage.getItem('admin_dismissed_schedule_reminders') || '[]');
       if (!dismissed.includes(uid)) {
         dismissed.push(uid);
         localStorage.setItem('admin_dismissed_schedule_reminders', JSON.stringify(dismissed));
       }
+
       loadPendingReminders();
-      showToast('Lembrete arquivado da fila de agendamento.', 'info');
+      showToast(`Cliente ${rem.clientName} removido da fila de agendamento.`, 'info');
       window.dispatchEvent(new Event('storage'));
-    } catch (_) {}
+    } catch (err) {
+      console.error('Erro ao remover cliente da fila:', err);
+    }
   };
 
   const handleAddSession = (e) => {
@@ -346,11 +382,12 @@ export default function ScheduleModule() {
 
                   <div className="flex items-center gap-2 ml-auto">
                     <button
-                      onClick={() => handleDismissReminder(rem.universalId || rem.uid)}
-                      className="text-[11px] text-slate-400 hover:text-slate-200 px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition-colors"
-                      title="Ocultar lembrete"
+                      onClick={() => handleRemoveFromQueue(rem)}
+                      className="px-2.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                      title="Remover cliente da fila de agendamento"
                     >
-                      Ocultar
+                      <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                      <span>Remover da Fila</span>
                     </button>
                     <button
                       onClick={() => handleStartScheduleForReminder(rem)}

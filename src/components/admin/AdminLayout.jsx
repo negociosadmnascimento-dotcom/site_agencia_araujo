@@ -94,10 +94,26 @@ export default function AdminLayout({ onBackToSite }) {
           if (!isRead) unreadForms++;
         }
 
-        // Lembrete da Esteira: Clientes que concluíram a contratação mas ainda não têm data agendada
+        // Lembrete da Esteira: Clientes que concluíram a contratação (pagamento + aceite) mas ainda não têm data agendada
         const contracts = JSON.parse(localStorage.getItem('admin_contracts') || '[]');
         const explicitPending = JSON.parse(localStorage.getItem('admin_pending_schedules') || '[]');
         const dismissedReminders = JSON.parse(localStorage.getItem('admin_dismissed_schedule_reminders') || '[]');
+        const payments = JSON.parse(localStorage.getItem('admin_payments') || '[]');
+
+        const isPaymentConfirmed = (uid, clientName) => {
+          return payments.some(p => {
+            const pUid = (p.universalId || '').trim().toLowerCase();
+            const pClient = (p.clientName || '').trim().toLowerCase();
+            const targetUid = (uid || '').trim().toLowerCase();
+            const targetClient = (clientName || '').trim().toLowerCase();
+            const matchUid = targetUid && (pUid === targetUid || p.invoice?.toLowerCase().includes(targetUid));
+            const matchClient = targetClient && (pClient === targetClient || pClient.includes(targetClient));
+            if (matchUid || matchClient) {
+              return p.status === 'Sinal Quitado' || p.status === 'Quitado';
+            }
+            return false;
+          });
+        };
 
         const scheduledUids = new Set(sessions.map(s => s.universalId).filter(Boolean));
         const scheduledNames = new Set(sessions.map(s => (s.client || '').toLowerCase().trim()));
@@ -105,24 +121,31 @@ export default function AdminLayout({ onBackToSite }) {
         const pendingReminders = [];
         const seenScheduleUids = new Set();
 
+        // 1. Contratos estritamente aceitos com pagamento confirmado
+        for (const ctr of contracts) {
+          if (!ctr || !ctr.clientName) continue;
+          const isAccepted = ctr.signedStatus === 'Assinado Digitalmente' || ctr.signedStatus === 'Contrato Aceito';
+          if (!isAccepted) continue;
+
+          const uid = ctr.universalId || ctr.contractNumber;
+          if (dismissedReminders.includes(uid)) continue;
+          if (scheduledUids.has(uid) || scheduledNames.has((ctr.clientName || '').toLowerCase().trim())) continue;
+          if (!isPaymentConfirmed(uid, ctr.clientName)) continue;
+          if (seenScheduleUids.has(uid)) continue;
+          seenScheduleUids.add(uid);
+          pendingReminders.push(ctr);
+        }
+
+        // 2. Despachados explicitamente pós-aceite
         for (const p of explicitPending) {
           if (!p || !p.clientName) continue;
           const uid = p.universalId || p.id;
           if (dismissedReminders.includes(uid)) continue;
           if (scheduledUids.has(uid) || scheduledNames.has((p.clientName || '').toLowerCase().trim())) continue;
+          if (!isPaymentConfirmed(uid, p.clientName)) continue;
           if (seenScheduleUids.has(uid)) continue;
           seenScheduleUids.add(uid);
           pendingReminders.push(p);
-        }
-
-        for (const ctr of contracts) {
-          if (!ctr || !ctr.clientName) continue;
-          const uid = ctr.universalId || ctr.contractNumber;
-          if (dismissedReminders.includes(uid)) continue;
-          if (scheduledUids.has(uid) || scheduledNames.has((ctr.clientName || '').toLowerCase().trim())) continue;
-          if (seenScheduleUids.has(uid)) continue;
-          seenScheduleUids.add(uid);
-          pendingReminders.push(ctr);
         }
 
         setCounts({

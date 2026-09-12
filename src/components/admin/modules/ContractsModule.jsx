@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FileCheck, Plus, Search, Check, 
-  ShieldCheck, X, RefreshCw, AlertTriangle, Clock
+  ShieldCheck, X, RefreshCw, AlertTriangle, Clock, CheckCircle2 
 } from 'lucide-react';
 import WhatsAppIcon from '../../../components/icons/WhatsAppIcon';
 import { useAuth } from '../../../context/AuthContext';
+import { supabase, isSupabaseConfigured } from '../../../lib/supabaseClient';
 
 export default function ContractsModule() {
   const { isSuperAdmin, logActivity } = useAuth();
@@ -30,6 +31,58 @@ export default function ContractsModule() {
       return [];
     }
   });
+
+  // ── Sincronização em tempo real com o Supabase ──
+  useEffect(() => {
+    async function syncFromSupabase() {
+      if (isSupabaseConfigured && supabase) {
+        try {
+          const { data, error } = await supabase.from('contratos').select('*');
+          if (!error && data && data.length > 0) {
+            setContracts(prev => {
+              const localMap = new Map(prev.map(c => [c.token || c.id, c]));
+              for (const row of data) {
+                const key = row.token || row.id;
+                const existing = localMap.get(key) || {};
+                localMap.set(key, {
+                  ...existing,
+                  id: row.id || existing.id,
+                  contractNumber: row.contract_number || existing.contractNumber,
+                  universalId: row.universal_id || existing.universalId,
+                  clientName: row.client_name || existing.clientName,
+                  clientCpf: row.client_cpf || existing.clientCpf,
+                  phone: row.phone || existing.phone,
+                  serviceTitle: row.service_title || existing.serviceTitle,
+                  totalAmount: row.total_amount || existing.totalAmount,
+                  depositAmount: row.deposit_amount || existing.depositAmount,
+                  remainingAmount: row.remaining_amount || existing.remainingAmount,
+                  eventDate: row.event_date || existing.eventDate,
+                  eventTime: row.event_time || existing.eventTime,
+                  signedStatus: row.status === 'Assinado Digitalmente' || row.status === 'aceito' ? 'Assinado Digitalmente' : (existing.signedStatus || row.status || 'Aguardando Assinatura'),
+                  signedAt: row.assinado_em ? new Date(row.assinado_em).toLocaleString('pt-BR') : existing.signedAt,
+                  revisaoSolicitada: Boolean(row.revisao_solicitada),
+                  revisaoAt: row.revisao_at || existing.revisaoAt,
+                  token: row.token || existing.token,
+                  statusColor: (row.status === 'Assinado Digitalmente' || row.status === 'aceito')
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                    : (row.revisao_solicitada ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'),
+                });
+              }
+              const merged = Array.from(localMap.values());
+              try { localStorage.setItem('admin_contracts', JSON.stringify(merged)); } catch (_) {}
+              return merged;
+            });
+          }
+        } catch (err) {
+          console.warn('Erro ao sincronizar contratos do Supabase:', err);
+        }
+      }
+    }
+
+    syncFromSupabase();
+    const interval = setInterval(syncFromSupabase, 8000);
+    return () => clearInterval(interval);
+  }, []);
 
   const emptyNewCtr = {
     clientName: '',
@@ -138,20 +191,96 @@ export default function ContractsModule() {
   };
 
   // ── Mark contract as "Revisão Solicitada" ──
-  const markAsRevision = (ctrId) => {
-    const updated = contracts.map((c) =>
-      c.id === ctrId
-        ? { ...c, revisaoSolicitada: true, revisaoAt: new Date().toLocaleDateString('pt-BR') }
-        : c
-    );
+  const markAsRevision = async (ctrId) => {
+    const today = new Date().toLocaleDateString('pt-BR');
+    let target = null;
+    const updated = contracts.map((c) => {
+      if (c.id === ctrId) {
+        target = { ...c, revisaoSolicitada: true, revisaoAt: today };
+        return target;
+      }
+      return c;
+    });
     setContracts(updated);
-    localStorage.setItem('admin_contracts', JSON.stringify(updated));
-    const ctrNum = contracts.find(c => c.id === ctrId)?.contractNumber || ctrId;
+    try { localStorage.setItem('admin_contracts', JSON.stringify(updated)); } catch (_) {}
+
+    if (isSupabaseConfigured && supabase && target?.token) {
+      try {
+        await supabase.from('contratos').update({
+          revisao_solicitada: true,
+          revisao_at: today,
+        }).eq('token', target.token);
+      } catch (_) {}
+    }
+
+    const ctrNum = target?.contractNumber || ctrId;
     logActivity?.('REVISAO_CONTRATO', 'contratos', `Marcou revisão solicitada no contrato ${ctrNum}`);
     showToast('⚠ Revisão solicitada registrada — cliente aguarda retorno.');
   };
 
-  // ── Build WhatsApp message with full contract details ──
+  // ── Confirmar Aceite Manual do Contrato (pelo Admin) ──
+  const handleConfirmAceite = async (ctrId) => {
+    const nowIso = new Date().toISOString();
+    const nowFormatted = new Date().toLocaleString('pt-BR');
+    let acceptedCtr = null;
+
+    const updated = contracts.map((c) => {
+      if (c.id === ctrId) {
+        acceptedCtr = {
+          ...c,
+          signedStatus: 'Assinado Digitalmente',
+          signedAt: nowFormatted,
+          revisaoSolicitada: false,
+          statusColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+        };
+        return acceptedCtr;
+      }
+      return c;
+    });
+
+    setContracts(updated);
+    try { localStorage.setItem('admin_contracts', JSON.stringify(updated)); } catch (_) {}
+
+    // Sincroniza com Supabase
+    if (isSupabaseConfigured && supabase && acceptedCtr?.token) {
+      try {
+        await supabase.from('contratos').update({
+          status: 'Assinado Digitalmente',
+          assinado_em: nowIso,
+          revisao_solicitada: false,
+        }).eq('token', acceptedCtr.token);
+      } catch (err) {
+        console.warn('Erro ao atualizar aceite no Supabase:', err);
+      }
+    }
+
+    // Despacha para a Agenda de Ensaios (última etapa da esteira após aceite do contrato!)
+    if (acceptedCtr) {
+      try {
+        const pendingList = JSON.parse(localStorage.getItem('admin_pending_schedules') || '[]');
+        const uid = acceptedCtr.universalId || acceptedCtr.contractNumber;
+        if (!pendingList.some(item => (item.universalId || item.id) === uid)) {
+          pendingList.unshift({
+            id: `sched_rem_${Date.now()}`,
+            universalId: uid,
+            clientName: acceptedCtr.clientName,
+            phone: acceptedCtr.phone,
+            service: acceptedCtr.serviceTitle,
+            depositAmount: acceptedCtr.depositAmount,
+            contractNumber: acceptedCtr.contractNumber,
+            createdAt: nowIso,
+          });
+          localStorage.setItem('admin_pending_schedules', JSON.stringify(pendingList));
+          window.dispatchEvent(new Event('storage'));
+        }
+      } catch (_) {}
+    }
+
+    logActivity?.('ACEITE_CONTRATO', 'contratos', `Confirmou aceite digital do contrato ${acceptedCtr?.contractNumber}`);
+    showToast(`Contrato ${acceptedCtr?.contractNumber} aceito! Cliente avançou para a Agenda de Ensaios.`);
+  };
+
+  // ── Build WhatsApp message with full contract details + Link Oficial ──
   const buildWhatsAppMsg = (ctr) => {
     const sinalLine = ctr.depositAmount && ctr.depositAmount !== 'R$ 0,00'
       ? `\n✅ Sinal Pago: ${ctr.depositAmount}`
@@ -162,8 +291,14 @@ export default function ContractsModule() {
     const dataLine = ctr.eventDate && ctr.eventDate !== 'A definir'
       ? `\n📅 Data: ${ctr.eventDate}${ctr.eventTime ? ` às ${ctr.eventTime}` : ''}`
       : '';
+    const link = `https://agenciasaraujo.com.br/contrato/${ctr.token}`;
 
-    return `Olá ${ctr.clientName}! 🎉\nSegue seu contrato — Agências Araújo Fotografia:\n\n📋 Contrato: ${ctr.contractNumber}\n🆔 ID Universal: ${ctr.universalId || ctr.contractNumber}\n📸 Serviço: ${ctr.serviceTitle}${dataLine}\n💰 Valor Total: ${ctr.totalAmount}${sinalLine}${saldoLine}\n\n📝 Termos & Condições:\n• Cessão de imagem conforme Lei 9.610/98\n• Cancelamentos com até 72h de antecedência sem multa\n• Entrega das imagens em até 30 dias úteis após a produção\n• Direitos autorais reservados à Agências Araújo\n\nPara confirmar, responda com uma das opções:\n1️⃣ ACEITO — confirmo o contrato e os termos acima\n2️⃣ REVISAR — tenho dúvidas ou solicito alterações\n\nObrigado pela confiança! 📷✨\nAgências Araújo | (21) 97429-9780`;
+    return `Olá ${ctr.clientName}! 🎉\nSegue seu contrato oficial — Agências Araújo Fotografia:\n\n📋 Contrato: ${ctr.contractNumber}\n🆔 ID Universal: ${ctr.universalId || ctr.contractNumber}\n📸 Serviço: ${ctr.serviceTitle}${dataLine}\n💰 Valor Total: ${ctr.totalAmount}${sinalLine}${saldoLine}\n\n📝 Termos & Condições:\n• Cessão de imagem conforme Lei 9.610/98\n• Cancelamentos com até 72h de antecedência sem multa\n• Entrega das imagens em até 30 dias úteis após a produção\n• Direitos autorais reservados à Agências Araújo\n\n👉 Visualização e Aceite Digital Oficial:\n${link}\n\nPara confirmar, você também pode responder diretamente aqui:\n1️⃣ ACEITO — confirmo o contrato e os termos acima\n2️⃣ REVISAR — tenho dúvidas ou solicito alterações\n\nObrigado pela confiança! 📷✨\nAgências Araújo | (21) 97429-9780`;
+  };
+
+  // ── Mensagem de Confirmação & Agradecimento WhatsApp (Visual com Frase de Efeito) ──
+  const buildWhatsAppThankYouMsg = (ctr) => {
+    return `🎉 Parabéns, ${ctr.clientName}! Confirmamos o aceite do seu contrato ${ctr.contractNumber}!\n\nObrigado pela preferência e pela confiança na Agências Araújo! 📷✨\n"Eternizando momentos, contando histórias com arte, sensibilidade e excelência."\n\nSua produção já foi encaminhada para a nossa Agenda de Ensaios. Em breve nossa equipe entrará em contato para definir a data e horário ideal da sua sessão fotográfica!\n\nQualquer dúvida, estamos à disposição! 🥂✨\nAgências Araújo | (21) 97429-9780`;
   };
 
   const handleAddContract = (e) => {
@@ -231,6 +366,25 @@ export default function ContractsModule() {
           };
           existingPayments.unshift(autoPayment);
           localStorage.setItem('admin_payments', JSON.stringify(existingPayments));
+        }
+
+        // Sincroniza contrato na nuvem (Supabase) para acesso público pelo token
+        if (isSupabaseConfigured && supabase) {
+          supabase.from('contratos').upsert({
+            token: created.token,
+            universal_id: created.universalId,
+            contract_number: created.contractNumber,
+            client_name: created.clientName,
+            client_cpf: created.clientCpf,
+            phone: created.phone,
+            service_title: created.serviceTitle,
+            total_amount: created.totalAmount,
+            deposit_amount: created.depositAmount,
+            remaining_amount: created.remainingAmount,
+            event_date: created.eventDate,
+            event_time: created.eventTime,
+            status: created.signedStatus,
+          }, { onConflict: 'token' }).catch(e => console.warn('Supabase contract upsert fallback:', e));
         }
       } catch (err) {
         console.error('Erro ao persistir contrato:', err);
@@ -421,16 +575,46 @@ export default function ContractsModule() {
 
               {/* Actions */}
               <div className="flex flex-col items-end gap-2">
-                {/* Emitir Contrato individual */}
-                <button
-                  onClick={() => openContractFor(ctr)}
-                  className="px-3 py-1.5 rounded-xl bg-gold/10 hover:bg-gold/20 border border-gold/30 text-gold text-[10px] font-semibold flex items-center gap-1.5 transition-colors w-full justify-end"
-                  title="Emitir contrato para este cliente"
-                >
-                  <Plus className="w-3 h-3" />
-                  Emitir Contrato
-                </button>
+                {/* Linha 1: Ações de Emissão e Aceite */}
+                <div className="flex items-center gap-2">
+                  {/* Se ainda NÃO assinou: Botão para Confirmar Aceite diretamente */}
+                  {ctr.signedStatus !== 'Assinado Digitalmente' && (
+                    <button
+                      onClick={() => handleConfirmAceite(ctr.id)}
+                      className="px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-[10px] font-bold flex items-center gap-1.5 transition-colors shadow-sm"
+                      title="Confirmar que o cliente aceitou os termos (avança para a fila de agendamento)"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Confirmar Aceite</span>
+                    </button>
+                  )}
 
+                  {/* Se JÁ assinou: Botão para Enviar Agradecimento Oficial no WhatsApp */}
+                  {ctr.signedStatus === 'Assinado Digitalmente' && (
+                    <a
+                      href={`https://wa.me/55${(ctr.phone || '').replace(/\D/g, '')}?text=${encodeURIComponent(buildWhatsAppThankYouMsg(ctr))}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 rounded-xl bg-gold/15 hover:bg-gold/25 border border-gold/40 text-gold-300 text-[10px] font-bold flex items-center gap-1.5 transition-colors shadow-sm"
+                      title="Enviar agradecimento oficial e frase de efeito no WhatsApp do cliente"
+                    >
+                      <WhatsAppIcon className="w-3.5 h-3.5 text-gold-400" />
+                      <span>Agradecimento WhatsApp</span>
+                    </a>
+                  )}
+
+                  {/* Emitir / Editar Contrato individual */}
+                  <button
+                    onClick={() => openContractFor(ctr)}
+                    className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 text-[10px] font-semibold flex items-center gap-1.5 transition-colors"
+                    title="Editar minuta ou ajustar valores"
+                  >
+                    <Plus className="w-3 h-3 text-gold" />
+                    <span>Editar Minuta</span>
+                  </button>
+                </div>
+
+                {/* Linha 2: Ações de Comunicação e Revisão */}
                 <div className="flex items-center gap-2">
                   {/* Marcar como Revisão Solicitada */}
                   {!ctr.revisaoSolicitada && ctr.signedStatus !== 'Assinado Digitalmente' && (
@@ -440,19 +624,20 @@ export default function ContractsModule() {
                       className="px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-[11px] font-semibold text-amber-300 flex items-center gap-1.5 transition-colors"
                     >
                       <AlertTriangle className="w-3.5 h-3.5" />
-                      Revisão
+                      <span>Revisão</span>
                     </button>
                   )}
 
-                  {/* WhatsApp — envia contrato completo */}
+                  {/* WhatsApp — envia contrato completo + link digital */}
                   <a
                     href={`https://wa.me/55${(ctr.phone || '').replace(/\D/g, '')}?text=${encodeURIComponent(buildWhatsAppMsg(ctr))}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 transition-colors"
-                    title="Enviar contrato completo via WhatsApp (com opção Aceitar/Revisar)"
+                    className="px-3 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 transition-colors flex items-center gap-1.5 text-xs font-semibold"
+                    title="Enviar contrato e link oficial de aceite via WhatsApp"
                   >
                     <WhatsAppIcon className="w-4 h-4 text-green-400" />
+                    <span>Enviar Contrato</span>
                   </a>
                 </div>
               </div>
