@@ -137,9 +137,9 @@ export default function ContractsModule() {
       return ctr.signedStatus === 'Assinado Digitalmente';
     }
 
-    // Se há faturas associadas, OBRIGATORIAMENTE ao menos uma precisa estar 'Sinal Quitado' ou 'Quitado'
+    // Se há faturas associadas, OBRIGATORIAMENTE ao menos uma precisa estar confirmada (Sinal Recebido ou Total Quitado)
     return matchingPayments.some(
-      (p) => p.status === 'Sinal Quitado' || p.status === 'Quitado'
+      (p) => p.status === 'Sinal Recebido' || p.status === 'Total Quitado' || p.status === 'Sinal Quitado' || p.status === 'Quitado'
     );
   };
 
@@ -156,7 +156,7 @@ export default function ContractsModule() {
       const pClient = (p.clientName || '').trim().toLowerCase();
       const pDesc = (p.description || '').trim().toLowerCase();
       const pInv = (p.invoice || '').trim().toLowerCase();
-      const isConfirmed = p.status === 'Sinal Quitado' || p.status === 'Quitado';
+      const isConfirmed = p.status === 'Sinal Recebido' || p.status === 'Total Quitado' || p.status === 'Sinal Quitado' || p.status === 'Quitado';
       if (!isConfirmed) return false;
 
       const matchByUid = uid && (pUid === uid || pDesc.includes(uid) || pInv.includes(uid));

@@ -355,7 +355,7 @@ export default function LeadsModule() {
             depositAmount: "R$ 0,00",
             remainingAmount: finalAmount,
             method: "Aguardando Definição",
-            status: "Pendente Sinal",
+            status: "Pendente",
             dueDate: new Date(now.getTime() + 7 * 86400000).toLocaleDateString("pt-BR"),
             paidAt: null,
             statusColor: "bg-amber-500/20 text-amber-300 border-amber-500/30",

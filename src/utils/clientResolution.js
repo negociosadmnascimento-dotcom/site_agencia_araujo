@@ -83,7 +83,7 @@ export const resolveClientPhone = (universalId, clientName, currentPhone) => {
  */
 export const sanitizePipelineData = () => {
   try {
-    const SANITIZE_VERSION = 'v2_fix_dedup_willian_agenda_strict';
+    const SANITIZE_VERSION = 'v3_status_pendente_sinal_recebido_total_quitado';
     const lastRun = localStorage.getItem('admin_sanitize_pipeline_version');
 
     let paymentsChanged = false;
@@ -98,6 +98,22 @@ export const sanitizePipelineData = () => {
       const seenNames = new Set();
 
       for (const p of payments) {
+        let normStatus = p.status;
+        let normColor = p.statusColor;
+        if (normStatus === 'Pendente Sinal') {
+          normStatus = 'Pendente';
+          normColor = 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+          paymentsChanged = true;
+        } else if (normStatus === 'Sinal Quitado') {
+          normStatus = 'Sinal Recebido';
+          normColor = 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30';
+          paymentsChanged = true;
+        } else if (normStatus === 'Quitado') {
+          normStatus = 'Total Quitado';
+          normColor = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
+          paymentsChanged = true;
+        }
+
         const isWillian = (p.clientName || '').toLowerCase().includes('willian') || (p.universalId || '').includes('WILLIA');
         if (isWillian) {
           // Unifica todos os pagamentos do Willian no ID canônico CLI-2026-959-WILLIA
@@ -114,7 +130,7 @@ export const sanitizePipelineData = () => {
             clientName: 'WILLIAN DE ARAUJO NASCIMENTO',
             phone: '(21) 99068-9864',
             description: 'Ensaio Retrato Corporativo',
-            status: 'Sinal Quitado',
+            status: 'Sinal Recebido',
             depositAmount: p.depositAmount && p.depositAmount !== 'R$ 0,00' ? p.depositAmount : 'R$ 1,00',
             statusColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
           });
@@ -129,7 +145,11 @@ export const sanitizePipelineData = () => {
           continue;
         }
         if (uid) seenUids.add(uid);
-        uniquePayments.push(p);
+        uniquePayments.push({
+          ...p,
+          status: normStatus,
+          statusColor: normColor,
+        });
       }
 
       if (paymentsChanged || lastRun !== SANITIZE_VERSION) {

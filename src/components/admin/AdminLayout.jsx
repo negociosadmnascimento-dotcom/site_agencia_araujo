@@ -111,7 +111,7 @@ export default function AdminLayout({ onBackToSite }) {
             const matchUid = targetUid && (pUid === targetUid || p.invoice?.toLowerCase().includes(targetUid));
             const matchClient = targetClient && (pClient === targetClient || pClient.includes(targetClient));
             if (matchUid || matchClient) {
-              return p.status === 'Sinal Quitado' || p.status === 'Quitado';
+              return p.status === 'Sinal Recebido' || p.status === 'Total Quitado' || p.status === 'Sinal Quitado' || p.status === 'Quitado';
             }
             return false;
           });

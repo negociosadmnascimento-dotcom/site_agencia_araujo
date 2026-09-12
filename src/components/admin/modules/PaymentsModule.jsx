@@ -26,7 +26,22 @@ export default function PaymentsModule() {
   const [payments, setPayments] = useState(() => {
     try {
       const stored = localStorage.getItem('admin_payments');
-      return stored ? JSON.parse(stored) : [];
+      const list = stored ? JSON.parse(stored) : [];
+      return list.map(p => {
+        let status = p.status;
+        let statusColor = p.statusColor;
+        if (status === 'Pendente Sinal') {
+          status = 'Pendente';
+          statusColor = 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+        } else if (status === 'Sinal Quitado') {
+          status = 'Sinal Recebido';
+          statusColor = 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30';
+        } else if (status === 'Quitado') {
+          status = 'Total Quitado';
+          statusColor = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
+        }
+        return { ...p, status, statusColor };
+      });
     } catch {
       return [];
     }
@@ -43,13 +58,7 @@ export default function PaymentsModule() {
     dueDate: '',
   });
 
-  // Modal para confirmação de Baixa do Sinal
-  const [depositModalOpen, setDepositModalOpen] = useState(false);
-  const [depositTargetPay, setDepositTargetPay] = useState(null);
-  const [depositInput, setDepositInput] = useState('');
-  const [depositMethod, setDepositMethod] = useState('PIX Instantâneo');
-
-  // Flag para indicar se o modal de adicionar pagamento foi aberto com pré-preenchimento (avulso = false)
+  // Flag para indicar se o modal de pagamento foi aberto vinculado a um cliente da esteira (avulso = false)
   const [isPayModalPrefilled, setIsPayModalPrefilled] = useState(false);
   const [editingPayId, setEditingPayId] = useState(null);
 
@@ -205,8 +214,8 @@ export default function PaymentsModule() {
     const remStr = formatCurrency(remVal);
 
     const hasDeposit = depVal > 0;
-    const isFull = depVal >= totalVal;
-    const initialStatus = isFull ? 'Quitado' : hasDeposit ? 'Sinal Quitado' : 'Pendente Sinal';
+    const isFull = totalVal > 0 && depVal >= totalVal;
+    const initialStatus = isFull ? 'Total Quitado' : hasDeposit ? 'Sinal Recebido' : 'Pendente';
     const statusColor = isFull 
       ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
       : hasDeposit 
@@ -216,7 +225,7 @@ export default function PaymentsModule() {
     const resolvedPhone = newPay.phone || resolveClientPhone(universalId, newPay.clientName);
 
     const created = {
-      id: `pay_${Date.now()}`,
+      id: editingPayId || `pay_${Date.now()}`,
       invoice: inv,
       universalId,
       clientName: newPay.clientName,
@@ -264,9 +273,9 @@ export default function PaymentsModule() {
         try { localStorage.setItem('admin_payments', JSON.stringify(next)); } catch (_) {}
         return next;
       });
-      logActivity('NOVO_LANCAMENTO_FINANCEIRO', 'pagamentos', `Registrou fatura ${inv} [${universalId}] (${created.amount}) para ${created.clientName}`);
+      logActivity?.('NOVO_LANCAMENTO_FINANCEIRO', 'pagamentos', `Registrou fatura ${inv} [${universalId}] (${created.amount}) para ${created.clientName} - Status: ${initialStatus}`);
       
-      // Se já foi cadastrado com sinal, dispara emissão de contrato
+      // Se status foi atualizado com sinal ou quitação, dispara emissão/atualização de contrato
       if (hasDeposit) {
         triggerAutoContract(created);
       }
@@ -275,6 +284,7 @@ export default function PaymentsModule() {
       setEditingPayId(null);
       setNewPay({ 
         clientName: '', 
+        phone: '',
         description: '', 
         amount: '', 
         depositAmount: '',
@@ -285,129 +295,15 @@ export default function PaymentsModule() {
       });
       setShowAddModal(false);
       showToast(editingPayId
-        ? `Pagamento para "${created.clientName}" atualizado com sucesso!`
+        ? `Lançamento de "${created.clientName}" atualizado! Status: "${initialStatus}".`
         : `Fatura ${inv} com ID Universal "${universalId}" registrada com sucesso!`
       );
     }, 600);
   };
 
-  // ── Abertura do Modal de Baixa de Sinal ────────────────────────────────────
-  const openDepositModal = (pay) => {
-    setDepositTargetPay(pay);
-    const existingDep = parseAmount(pay.depositAmount);
-    if (existingDep > 0) {
-      setDepositInput(pay.depositAmount);
-    } else {
-      // Sugere 50% como sinal padrão
-      const totalNum = parseAmount(pay.amount);
-      const half = totalNum > 0 ? (totalNum / 2).toFixed(2).replace('.', ',') : '';
-      setDepositInput(half ? `R$ ${half}` : '');
-    }
-    setDepositMethod(pay.method && pay.method !== 'Aguardando Definição' ? pay.method : 'PIX Instantâneo');
-    setDepositModalOpen(true);
-  };
-
-  // ── Confirmar Baixa do Sinal com Disparo de Contrato ───────────────────────
-  const handleConfirmDeposit = (e) => {
-    if (e && e.preventDefault) e.preventDefault();
-    if (!depositTargetPay) return;
-
-    const targetPay = depositTargetPay;
-    setDepositModalOpen(false);
-    setDepositTargetPay(null);
-
-    try {
-      const finalDepStr = depositInput.trim()
-        ? (depositInput.trim().startsWith('R$') ? depositInput.trim() : `R$ ${depositInput.trim()}`)
-        : 'R$ 0,00';
-      const totalVal = parseAmount(targetPay.amount);
-      const depVal = parseAmount(finalDepStr);
-      const remVal = Math.max(0, totalVal - depVal);
-      const remStr = formatCurrency(remVal);
-
-      const isFullyPaid = remVal === 0;
-      const newStatus = isFullyPaid ? 'Quitado' : 'Sinal Quitado';
-      const newColor = isFullyPaid 
-        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-        : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30';
-      const nowStr = new Date().toLocaleDateString('pt-BR');
-
-      let updatedTarget = null;
-      setPayments(prev => {
-        const next = prev.map(p => {
-          if (p.id === targetPay.id) {
-            updatedTarget = {
-              ...p,
-              depositAmount: finalDepStr,
-              remainingAmount: remStr,
-              method: depositMethod,
-              status: newStatus,
-              paidAt: `${newStatus} em ${nowStr}`,
-              statusColor: newColor,
-            };
-            return updatedTarget;
-          }
-          return p;
-        });
-        try { localStorage.setItem('admin_payments', JSON.stringify(next)); } catch (_) {}
-        return next;
-      });
-
-      logActivity?.('BAIXA_SINAL', 'pagamentos', `Confirmou sinal de ${finalDepStr} da fatura ${targetPay.invoice} (${targetPay.clientName})`);
-
-      // Disparo automático do Contrato
-      const createdCtr = triggerAutoContract(updatedTarget || {
-        ...targetPay,
-        depositAmount: finalDepStr,
-        remainingAmount: remStr,
-      });
-
-      if (createdCtr) {
-        showToast(`Sinal de ${finalDepStr} confirmado! Contrato ${createdCtr.contractNumber} emitido com ID "${targetPay.universalId}".`);
-      } else {
-        showToast(`Sinal de ${finalDepStr} confirmado com sucesso!`);
-      }
-    } catch (err) {
-      console.error('Erro ao confirmar sinal:', err);
-    }
-  };
-
-  // ── Quitação Integral com Disparo de Contrato ──────────────────────────────
-  const markAsPaid = (id) => {
-    let updatedTarget = null;
-    setPayments(prev => {
-      const next = prev.map(p => {
-        if (p.id === id) {
-          logActivity?.('BAIXA_PAGAMENTO', 'pagamentos', `Confirmou quitação da fatura ${p.invoice} de ${p.clientName}`);
-          updatedTarget = { 
-            ...p, 
-            depositAmount: p.amount,
-            remainingAmount: 'R$ 0,00',
-            status: 'Quitado', 
-            paidAt: 'Quitado integralmente', 
-            statusColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' 
-          };
-          return updatedTarget;
-        }
-        return p;
-      });
-      try { localStorage.setItem('admin_payments', JSON.stringify(next)); } catch (_) {}
-      return next;
-    });
-
-    if (updatedTarget) {
-      const createdCtr = triggerAutoContract(updatedTarget);
-      if (createdCtr) {
-        showToast(`Fatura quitada! Contrato ${createdCtr.contractNumber} emitido com ID "${updatedTarget.universalId}".`);
-        return;
-      }
-    }
-    showToast("Pagamento quitado com sucesso!");
-  };
-
   // ── Métricas Financeiras Dinâmicas ─────────────────────────────────────────
-  const paidPayments = payments.filter(p => p.status === 'Quitado');
-  const signalPayments = payments.filter(p => p.status === 'Sinal Quitado');
+  const paidPayments = payments.filter(p => p.status === 'Total Quitado' || p.status === 'Quitado');
+  const signalPayments = payments.filter(p => p.status === 'Sinal Recebido' || p.status === 'Sinal Quitado');
   
   // Total já recebido (sinais + pagamentos integrais)
   const totalPaid = paidPayments.reduce((acc, p) => acc + parseAmount(p.amount), 0) +
@@ -435,7 +331,9 @@ export default function PaymentsModule() {
                           (p.universalId || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'Todos' || 
                           p.status === filterStatus || 
-                          (filterStatus === 'Pendente Sinal' && p.status === 'Pendente');
+                          (filterStatus === 'Pendente' && (p.status === 'Pendente' || p.status === 'Pendente Sinal')) ||
+                          (filterStatus === 'Sinal Recebido' && (p.status === 'Sinal Recebido' || p.status === 'Sinal Quitado')) ||
+                          (filterStatus === 'Total Quitado' && (p.status === 'Total Quitado' || p.status === 'Quitado'));
     return matchesSearch && matchesStatus;
   });
 
@@ -545,7 +443,7 @@ export default function PaymentsModule() {
         </div>
 
         <div className="flex items-center gap-2">
-          {['Todos', 'Pendente Sinal', 'Sinal Quitado', 'Quitado'].map((st) => (
+          {['Todos', 'Pendente', 'Sinal Recebido', 'Total Quitado'].map((st) => (
             <button
               key={st}
               onClick={() => setFilterStatus(st)}
@@ -580,9 +478,7 @@ export default function PaymentsModule() {
             <tbody className="divide-y divide-white/5 text-slate-300">
               {filtered.map((pay) => {
                 const depNum = parseAmount(pay.depositAmount);
-                const isSignalPaid = pay.status === 'Sinal Quitado';
-                const isFullyPaid = pay.status === 'Quitado';
-                const isPending = pay.status === 'Pendente' || pay.status === 'Pendente Sinal';
+                const isFullyPaid = pay.status === 'Total Quitado' || pay.status === 'Quitado';
 
                 return (
                   <tr key={pay.id} className="hover:bg-white/[0.02] transition-colors">
@@ -626,64 +522,22 @@ export default function PaymentsModule() {
                       </div>
                     </td>
                     <td className="py-4 px-6">
-                      {/* Status badge */}
+                      {/* Status badge informativo sem botões de ação internos */}
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${pay.statusColor}`}>
                         {pay.status}
                       </span>
-
-                      {/* Ações de status integradas à coluna Status */}
-                      {isPending && (
-                        <div className="flex flex-col gap-1 mt-2">
-                          <button
-                            onClick={() => openDepositModal(pay)}
-                            title="Registrar recebimento de sinal (reserva)"
-                            className="px-2.5 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-[10px] font-semibold transition-colors whitespace-nowrap w-full text-left"
-                          >
-                            ↓ Baixar Sinal
-                          </button>
-                          <button
-                            onClick={() => markAsPaid(pay.id)}
-                            title="Quitar fatura integralmente"
-                            className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[10px] font-semibold transition-colors whitespace-nowrap w-full text-left"
-                          >
-                            ✓ Quitar Total
-                          </button>
-                        </div>
-                      )}
-
-                      {isSignalPaid && (
-                        <div className="flex flex-col gap-1 mt-2">
-                          <span className="text-[10px] font-mono text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20 whitespace-nowrap">
-                            Contrato Emitido ✓
-                          </span>
-                          <button
-                            onClick={() => markAsPaid(pay.id)}
-                            title="Receber e quitar o saldo restante na execução do ensaio"
-                            className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[10px] font-semibold transition-colors whitespace-nowrap w-full text-left"
-                          >
-                            ✓ Quitar Saldo
-                          </button>
-                        </div>
-                      )}
-
-                      {isFullyPaid && (
-                        <div className="mt-1">
-                          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                            Quitado 100% ✓
-                          </span>
-                        </div>
-                      )}
                     </td>
 
-                    {/* Coluna Ações: Lançar Pagamento individual + Deletar */}
+                    {/* Coluna Ações: Lançar Pagamento individual vinculado + Deletar */}
                     <td className="py-4 px-6 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           onClick={() => openPayModalFor(pay)}
                           title="Lançar pagamento vinculado a este cliente"
-                          className="px-2.5 py-1.5 rounded-xl bg-gold/10 hover:bg-gold/20 text-gold border border-gold/30 text-[10px] font-semibold transition-colors whitespace-nowrap"
+                          className="px-2.5 py-1.5 rounded-xl bg-gold/10 hover:bg-gold/20 text-gold border border-gold/30 text-[10px] font-semibold transition-colors whitespace-nowrap flex items-center gap-1"
                         >
-                          + Lançar Pag.
+                          <Plus className="w-3 h-3" />
+                          <span>Lançar Pag.</span>
                         </button>
                         <button
                           onClick={() => handleDeletePayment(pay.id, pay.invoice)}
@@ -702,100 +556,6 @@ export default function PaymentsModule() {
         </div>
       </div>
 
-      {/* Modal: Confirmar Baixa do Sinal & Disparo de Contrato */}
-      {depositModalOpen && depositTargetPay && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="w-full max-w-md rounded-3xl bg-slate-900 border border-cyan-500/40 p-6 sm:p-7 shadow-2xl relative">
-            <button
-              onClick={() => setDepositModalOpen(false)}
-              className="absolute right-5 top-5 text-slate-400 hover:text-white p-1"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-mono mb-2">
-              <span>Etapa 2 • Baixa do Sinal & Contrato</span>
-            </div>
-            <h2 className="text-xl font-serif font-bold text-white mb-1">Confirmar Recebimento de Sinal</h2>
-            <p className="text-xs text-slate-400 mb-5">
-              Cliente: <strong className="text-white">{depositTargetPay.clientName}</strong> • Fatura: <strong className="text-gold">{depositTargetPay.invoice}</strong>
-            </p>
-
-            <form onSubmit={handleConfirmDeposit} className="space-y-4">
-              <div className="p-3.5 rounded-2xl bg-black/40 border border-white/5 space-y-2 text-xs">
-                <div className="flex justify-between text-slate-300">
-                  <span>ID Universal do Cliente:</span>
-                  <span className="font-mono text-gold font-bold">{depositTargetPay.universalId}</span>
-                </div>
-                <div className="flex justify-between text-slate-300">
-                  <span>Valor Total do Pacote:</span>
-                  <span className="font-mono text-white font-bold">{depositTargetPay.amount}</span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Valor do Sinal Recebido (R$) *
-                </label>
-                <input
-                  type="text"
-                  required
-                  autoFocus
-                  value={depositInput}
-                  onChange={(e) => setDepositInput(e.target.value)}
-                  placeholder="Ex: R$ 425,00"
-                  className="w-full px-4 py-2.5 rounded-xl bg-black/50 border border-cyan-500/40 text-white text-sm focus:border-cyan-400 focus:outline-none font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Forma de Pagamento do Sinal</label>
-                <select
-                  value={depositMethod}
-                  onChange={(e) => setDepositMethod(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-black/50 border border-slate-700 text-white text-sm focus:border-cyan-400 focus:outline-none"
-                >
-                  <option>PIX Instantâneo</option>
-                  <option>Cartão de Crédito</option>
-                  <option>Transferência Bancária</option>
-                  <option>Dinheiro em Espécie</option>
-                  <option>Boleto Bancário</option>
-                </select>
-              </div>
-
-              {/* Saldo Restante Calculado em Tempo Real */}
-              <div className="p-3.5 rounded-2xl bg-cyan-950/30 border border-cyan-500/20 text-xs flex items-center justify-between">
-                <span className="text-slate-300">Saldo a Acertar na Produção:</span>
-                <span className="font-mono font-bold text-amber-300 text-sm">
-                  {formatCurrency(Math.max(0, parseAmount(depositTargetPay.amount) - parseAmount(depositInput)))}
-                </span>
-              </div>
-
-              <p className="text-[11px] text-slate-400 leading-relaxed bg-white/5 p-3 rounded-xl border border-white/5">
-                ⚡ <strong>Automação Ativa:</strong> Ao confirmar a baixa do sinal, a minuta contratual será emitida automaticamente no menu <strong>Contratos</strong> vinculada ao ID <strong>{depositTargetPay.universalId}</strong> com link seguro de assinatura digital para envio via WhatsApp.
-              </p>
-
-              <div className="pt-2 flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setDepositModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-slate-300"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  onClick={handleConfirmDeposit}
-                  className="px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-dark-950 font-bold text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/20 transition-all"
-                >
-                  Confirmar Baixa & Emitir Contrato
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* Add Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
@@ -812,7 +572,7 @@ export default function PaymentsModule() {
             </h2>
             <p className="text-xs text-slate-400 mb-6">
               {isPayModalPrefilled
-                ? 'Fatura pré-preenchida com os dados do cliente — confirme ou ajuste os valores'
+                ? 'Fatura pré-preenchida com os dados do cliente — confirme ou ajuste os valores e o sinal'
                 : 'Cadastre uma fatura avulsa com valor total e sinal de agendamento'}
             </p>
 
@@ -876,7 +636,7 @@ export default function PaymentsModule() {
                   </span>
                 </div>
                 <div className="flex justify-between text-cyan-300">
-                  <span>Sinal Informado:</span>
+                  <span>Sinal Informado (Entrada):</span>
                   <span className="font-mono font-semibold">
                     {newPay.depositAmount ? (newPay.depositAmount.startsWith('R$') ? newPay.depositAmount : `R$ ${newPay.depositAmount}`) : 'R$ 0,00'}
                   </span>
@@ -887,7 +647,39 @@ export default function PaymentsModule() {
                     {formatCurrency(Math.max(0, parseAmount(newPay.amount) - parseAmount(newPay.depositAmount)))}
                   </span>
                 </div>
+                <div className="flex justify-between items-center border-t border-white/5 pt-1.5 text-slate-300">
+                  <span>Status Resultante:</span>
+                  {(() => {
+                    const tVal = parseAmount(newPay.amount);
+                    const dVal = parseAmount(newPay.depositAmount);
+                    if (tVal > 0 && dVal >= tVal) {
+                      return (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          Total Quitado ✓
+                        </span>
+                      );
+                    }
+                    if (dVal > 0) {
+                      return (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                          Sinal Recebido ⚡ (Dispara Contrato)
+                        </span>
+                      );
+                    }
+                    return (
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        Pendente
+                      </span>
+                    );
+                  })()}
+                </div>
               </div>
+
+              {parseAmount(newPay.depositAmount) > 0 && (
+                <p className="text-[11px] text-cyan-300 leading-relaxed bg-cyan-500/10 p-2.5 rounded-xl border border-cyan-500/20">
+                  ⚡ <strong>Avanço da Esteira:</strong> Ao salvar com sinal ou quitação, a minuta contratual será emitida/atualizada automaticamente no menu <strong>Contratos</strong>.
+                </p>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -972,10 +764,10 @@ export default function PaymentsModule() {
                   {isSaving ? (
                     <>
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>Registrando...</span>
+                      <span>Processando...</span>
                     </>
                   ) : (
-                    <span>Registrar Fatura</span>
+                    <span>{isPayModalPrefilled ? 'Salvar Lançamento do Cliente' : 'Registrar Fatura'}</span>
                   )}
                 </button>
               </div>
